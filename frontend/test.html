@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NaLa Coder - 功能测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .test-title {
+            color: #58a6ff;
+            margin-bottom: 10px;
+        }
+        .test-button {
+            background-color: #1f6feb;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background-color: #1a7f37;
+        }
+        .test-result {
+            background-color: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .status.success {
+            background-color: #3fb950;
+            color: #ffffff;
+        }
+        .status.error {
+            background-color: #f85149;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>NaLa Coder - 功能测试</h1>
+        
+        <div class="test-section">
+            <h2 class="test-title">后端连接测试</h2>
+            <button class="test-button" onclick="testHealth()">测试健康检查</button>
+            <button class="test-button" onclick="testChat()">测试聊天API</button>
+            <button class="test-button" onclick="testFileTree()">测试文件树API</button>
+            <div id="healthResult" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2 class="test-title">语音功能测试</h2>
+            <button class="test-button" onclick="testSpeechRecognition()">测试语音识别</button>
+            <button class="test-button" onclick="testSpeechSynthesis()">测试语音合成</button>
+            <div id="speechResult" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2 class="test-title">浏览器功能检测</h2>
+            <div id="browserResult" class="test-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // 测试健康检查
+        async function testHealth() {
+            const result = document.getElementById('healthResult');
+            result.textContent = '正在测试...';
+            
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                result.textContent = `健康检查成功:\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                result.textContent = `健康检查失败: ${error.message}`;
+            }
+        }
+
+        // 测试聊天API
+        async function testChat() {
+            const result = document.getElementById('healthResult');
+            result.textContent = '正在测试聊天API...';
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: '你好，这是一个测试消息',
+                        stream: false
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                result.textContent = `聊天API测试成功:\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                result.textContent = `聊天API测试失败: ${error.message}`;
+            }
+        }
+
+        // 测试文件树API
+        async function testFileTree() {
+            const result = document.getElementById('healthResult');
+            result.textContent = '正在测试文件树API...';
+            
+            try {
+                const response = await fetch('/api/files/tree');
+                const data = await response.json();
+                result.textContent = `文件树API测试成功:\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                result.textContent = `文件树API测试失败: ${error.message}`;
+            }
+        }
+
+        // 测试语音识别
+        function testSpeechRecognition() {
+            const result = document.getElementById('speechResult');
+            
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                result.textContent = '✅ 浏览器支持语音识别';
+                
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'zh-CN';
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                
+                recognition.onstart = () => {
+                    result.textContent += '\n🎤 开始语音识别...';
+                };
+                
+                recognition.onresult = (event) => {
+                    const transcript = Array.from(event.results)
+                        .map(result => result[0])
+                        .map(result => result.transcript)
+                        .join('');
+                    
+                    result.textContent += `\n📝 识别结果: ${transcript}`;
+                };
+                
+                recognition.onerror = (event) => {
+                    result.textContent += `\n❌ 语音识别错误: ${event.error}`;
+                };
+                
+                recognition.onend = () => {
+                    result.textContent += '\n✅ 语音识别结束';
+                };
+                
+                recognition.start();
+            } else {
+                result.textContent = '❌ 浏览器不支持语音识别';
+            }
+        }
+
+        // 测试语音合成
+        function testSpeechSynthesis() {
+            const result = document.getElementById('speechResult');
+            
+            if ('speechSynthesis' in window) {
+                result.textContent = '✅ 浏览器支持语音合成';
+                
+                const utterance = new SpeechSynthesisUtterance('这是一个语音合成测试');
+                utterance.lang = 'zh-CN';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.0;
+                
+                utterance.onstart = () => {
+                    result.textContent += '\n🔊 开始语音合成...';
+                };
+                
+                utterance.onend = () => {
+                    result.textContent += '\n✅ 语音合成完成';
+                };
+                
+                utterance.onerror = (event) => {
+                    result.textContent += `\n❌ 语音合成错误: ${event.error}`;
+                };
+                
+                window.speechSynthesis.speak(utterance);
+            } else {
+                result.textContent = '❌ 浏览器不支持语音合成';
+            }
+        }
+
+        // 检测浏览器功能
+        function detectBrowserFeatures() {
+            const result = document.getElementById('browserResult');
+            const features = [];
+            
+            // 检测语音识别
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                features.push('✅ 语音识别 (Web Speech API)');
+            } else {
+                features.push('❌ 语音识别 (Web Speech API)');
+            }
+            
+            // 检测语音合成
+            if ('speechSynthesis' in window) {
+                features.push('✅ 语音合成 (Web Speech API)');
+            } else {
+                features.push('❌ 语音合成 (Web Speech API)');
+            }
+            
+            // 检测Fetch API
+            if ('fetch' in window) {
+                features.push('✅ Fetch API');
+            } else {
+                features.push('❌ Fetch API');
+            }
+            
+            // 检测ES6模块
+            try {
+                new Function('import("")');
+                features.push('✅ ES6 模块');
+            } catch (e) {
+                features.push('❌ ES6 模块');
+            }
+            
+            // 检测CSS Grid
+            if (CSS.supports('display', 'grid')) {
+                features.push('✅ CSS Grid');
+            } else {
+                features.push('❌ CSS Grid');
+            }
+            
+            // 检测Flexbox
+            if (CSS.supports('display', 'flex')) {
+                features.push('✅ CSS Flexbox');
+            } else {
+                features.push('❌ CSS Flexbox');
+            }
+            
+            result.textContent = features.join('\n');
+        }
+
+        // 页面加载时检测浏览器功能
+        document.addEventListener('DOMContentLoaded', detectBrowserFeatures);
+    </script>
+</body>
+</html> 

@@ -81,9 +81,19 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 		router.StaticFS("/static", http.FS(staticFS))
 	}
 
-	// 默认页面
+	// 前端文件路由 - 处理所有 /frontend/* 请求
+	router.Static("/frontend", "./frontend")
+
+	// 默认页面 - 优先使用前端页面
 	router.GET("/", func(c *gin.Context) {
-		// 获取当前工作目录
+		// 检查是否存在前端文件
+		if _, err := os.Stat("./frontend/index.html"); err == nil {
+			// 如果存在前端文件，重定向到前端页面
+			c.Redirect(http.StatusMovedPermanently, "/frontend/")
+			return
+		}
+
+		// 否则使用嵌入式模板
 		currentDir, err := os.Getwd()
 		if err != nil {
 			s.logger.Error("Failed to get current directory", "error", err)
