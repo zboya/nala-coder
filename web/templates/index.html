@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 NaLa Coder</h1>
+        <div class="header-info">
+            <div class="session-info" id="sessionInfo">新会话</div>
+            <div class="controls">
+                <button class="toggle-btn active" id="streamToggle">流式响应</button>
+                <button class="toggle-btn" id="sidebarToggle">显示侧边栏</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="chat-section">
+            <div class="chat-container" id="chatContainer">
+                <div class="message system-message">
+                    <div class="message-content">
+                        <strong>🤖 NaLa Coder</strong>
+                        <br>你好！我是你的AI编程助手。我可以帮助你：
+                        <br>• 🛠️ 各种开发任务　• 🔍 搜索代码　• 💻 执行系统命令
+                        <br>• 你可以说"小助手"来唤起我，然后告诉我你要做什么。
+                    </div>
+                    <div class="message-meta">系统消息</div>
+                </div>
+            </div>
+            
+            <div class="input-section">
+                <div class="input-container">
+                    <textarea class="message-input" id="messageInput" placeholder="输入你的消息..." rows="1"></textarea>
+                    <button class="voice-button" id="voiceButton" title="语音输入">🎤</button>
+                    <button class="send-button" id="sendButton">发送</button>
+                </div>
+                <div class="voice-status" id="voiceStatus" style="display: none;">
+                    <span class="voice-indicator" id="voiceIndicator">🔴</span>
+                    <span class="voice-text" id="voiceText">准备中...</span>
+                </div>
+            </div>
+            
+            <div class="status" id="status">就绪</div>
+        </div>
+
+        <div class="sidebar" id="sidebar" style="display: none;">
+            <div>
+                <h3>📋 会话管理</h3>
+                <button class="new-session-btn" id="newSessionBtn">新建会话</button>
+                <div class="sessions-list" id="sessionsList">
+                    <div class="session-item">暂无会话记录</div>
+                </div>
+            </div>
+
+            <div>
+                <h3>🛠️ 可用工具</h3>
+                <div class="tools-list" id="toolsList">
+                    <div class="tool-item">加载中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
