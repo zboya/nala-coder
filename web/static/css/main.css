@@ -28,6 +28,41 @@ body {
     gap: 10px;
 }
 
+.project-path {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 8px 0;
+    font-size: 13px;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.path-label {
+    color: #6c757d;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.path-value {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    background: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    font-size: 12px;
+    color: #007bff;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
+
 .header-info {
     display: flex;
     justify-content: space-between;

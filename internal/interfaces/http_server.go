@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -74,8 +75,16 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 
 	// 默认页面
 	router.GET("/", func(c *gin.Context) {
+		// 获取当前工作目录
+		currentDir, err := os.Getwd()
+		if err != nil {
+			s.logger.Error("Failed to get current directory", "error", err)
+			currentDir = "未知路径"
+		}
+
 		c.HTML(http.StatusOK, "index.html", gin.H{
-			"title": "NaLa Coder",
+			"title":       "NaLa Coder",
+			"projectPath": currentDir,
 		})
 	})
 
