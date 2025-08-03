@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -50,6 +54,10 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 		// 会话管理
 		api.GET("/session/:id", s.handleGetSession)
 		api.GET("/sessions", s.handleListSessions)
+
+		// 文件浏览
+		api.GET("/files/tree", s.handleGetFileTree)
+		api.GET("/files/content", s.handleGetFileContent)
 
 		// 语音配置（保留基本配置接口）
 		api.GET("/speech/config", s.handleGetSpeechConfig)
@@ -115,6 +123,25 @@ type SpeechConfigResponse struct {
 	WakeWords   []string `json:"wake_words"`
 	WakeTimeout int      `json:"wake_timeout"`
 	Language    string   `json:"language"`
+}
+
+// FileNode 文件节点
+type FileNode struct {
+	Name     string      `json:"name"`
+	Path     string      `json:"path"`
+	Type     string      `json:"type"` // "file" or "directory"
+	Size     int64       `json:"size"`
+	ModTime  time.Time   `json:"mod_time"`
+	Children []*FileNode `json:"children,omitempty"`
+}
+
+// FileContentResponse 文件内容响应
+type FileContentResponse struct {
+	Path     string `json:"path"`
+	Content  string `json:"content"`
+	Language string `json:"language"`
+	Size     int64  `json:"size"`
+	ModTime  string `json:"mod_time"`
 }
 
 // handleChat 处理聊天请求
@@ -323,4 +350,289 @@ func (s *HTTPServer) handleGetSpeechConfig(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, config)
+}
+
+// handleGetFileTree 获取文件树
+func (s *HTTPServer) handleGetFileTree(c *gin.Context) {
+	// 获取查询参数
+	path := c.Query("path")
+	if path == "" {
+		// 获取当前工作目录
+		currentDir, err := os.Getwd()
+		if err != nil {
+			s.logger.Error("Failed to get current directory", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current directory"})
+			return
+		}
+		path = currentDir
+	}
+
+	// 构建文件树
+	root, err := s.buildFileTree(path, 0, 3) // 限制深度为3
+	if err != nil {
+		s.logger.Error("Failed to build file tree", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"tree": root,
+		"path": path,
+	})
+}
+
+// handleGetFileContent 获取文件内容
+func (s *HTTPServer) handleGetFileContent(c *gin.Context) {
+	filePath := c.Query("path")
+	if filePath == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path parameter is required"})
+		return
+	}
+
+	// 检查文件是否存在
+	info, err := os.Stat(filePath)
+	if err != nil {
+		s.logger.Error("Failed to stat file", "path", filePath, "error", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		return
+	}
+
+	// 检查是否为文件
+	if info.IsDir() {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Path is a directory, not a file"})
+		return
+	}
+
+	// 检查文件大小（限制为1MB）
+	if info.Size() > 1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File too large (max 1MB)"})
+		return
+	}
+
+	// 检查是否为文本文件
+	if !s.isTextFile(filePath) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File is not a text file"})
+		return
+	}
+
+	// 读取文件内容
+	content, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		s.logger.Error("Failed to read file", "path", filePath, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+		return
+	}
+
+	// 检测编程语言
+	language := s.detectLanguage(filePath)
+
+	response := FileContentResponse{
+		Path:     filePath,
+		Content:  string(content),
+		Language: language,
+		Size:     info.Size(),
+		ModTime:  info.ModTime().Format("2006-01-02 15:04:05"),
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// buildFileTree 构建文件树
+func (s *HTTPServer) buildFileTree(path string, currentDepth, maxDepth int) (*FileNode, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	node := &FileNode{
+		Name:    info.Name(),
+		Path:    path,
+		Size:    info.Size(),
+		ModTime: info.ModTime(),
+	}
+
+	if info.IsDir() {
+		node.Type = "directory"
+		node.Name = filepath.Base(path)
+		if node.Name == "." {
+			node.Name = filepath.Base(filepath.Dir(path))
+		}
+
+		// 如果还未达到最大深度，继续构建子目录
+		if currentDepth < maxDepth {
+			entries, err := ioutil.ReadDir(path)
+			if err != nil {
+				s.logger.Warn("Failed to read directory", "path", path, "error", err)
+				return node, nil
+			}
+
+			var children []*FileNode
+			for _, entry := range entries {
+				// 跳过隐藏文件和一些常见的忽略目录
+				if s.shouldSkipFile(entry.Name()) {
+					continue
+				}
+
+				childPath := filepath.Join(path, entry.Name())
+				child, err := s.buildFileTree(childPath, currentDepth+1, maxDepth)
+				if err != nil {
+					s.logger.Warn("Failed to build child tree", "path", childPath, "error", err)
+					continue
+				}
+				children = append(children, child)
+			}
+
+			// 按类型和名称排序：目录在前，文件在后
+			sort.Slice(children, func(i, j int) bool {
+				if children[i].Type != children[j].Type {
+					return children[i].Type == "directory"
+				}
+				return children[i].Name < children[j].Name
+			})
+
+			node.Children = children
+		}
+	} else {
+		node.Type = "file"
+	}
+
+	return node, nil
+}
+
+// shouldSkipFile 判断是否应该跳过文件/目录
+func (s *HTTPServer) shouldSkipFile(name string) bool {
+	// 跳过隐藏文件
+	if strings.HasPrefix(name, ".") {
+		return true
+	}
+
+	// 跳过常见的忽略目录
+	skipDirs := []string{
+		"node_modules", "vendor", "target", "build", "dist",
+		"logs", "log", "tmp", "temp", ".git", ".svn",
+		"__pycache__", ".pytest_cache", ".coverage",
+	}
+
+	for _, skipDir := range skipDirs {
+		if name == skipDir {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isTextFile 判断是否为文本文件
+func (s *HTTPServer) isTextFile(filePath string) bool {
+	ext := strings.ToLower(filepath.Ext(filePath))
+
+	textExts := []string{
+		".txt", ".md", ".markdown", ".rst", ".adoc",
+		".go", ".py", ".js", ".ts", ".jsx", ".tsx",
+		".html", ".htm", ".css", ".scss", ".sass", ".less",
+		".json", ".xml", ".yaml", ".yml", ".toml", ".ini",
+		".sh", ".bash", ".zsh", ".fish", ".ps1", ".bat", ".cmd",
+		".c", ".cpp", ".cc", ".cxx", ".h", ".hpp", ".hxx",
+		".java", ".kt", ".scala", ".clj", ".cljs",
+		".rb", ".php", ".pl", ".r", ".sql",
+		".vim", ".lua", ".dart", ".swift", ".rs",
+		".dockerfile", ".makefile", ".gitignore", ".gitattributes",
+		".env", ".properties", ".conf", ".config",
+	}
+
+	for _, textExt := range textExts {
+		if ext == textExt {
+			return true
+		}
+	}
+
+	// 检查一些无扩展名的常见文本文件
+	base := strings.ToLower(filepath.Base(filePath))
+	textFiles := []string{
+		"makefile", "dockerfile", "license", "readme",
+		"changelog", "authors", "contributors", "copying",
+	}
+
+	for _, textFile := range textFiles {
+		if base == textFile {
+			return true
+		}
+	}
+
+	return false
+}
+
+// detectLanguage 检测编程语言
+func (s *HTTPServer) detectLanguage(filePath string) string {
+	ext := strings.ToLower(filepath.Ext(filePath))
+
+	langMap := map[string]string{
+		".go":       "go",
+		".py":       "python",
+		".js":       "javascript",
+		".ts":       "typescript",
+		".jsx":      "javascript",
+		".tsx":      "typescript",
+		".html":     "html",
+		".htm":      "html",
+		".css":      "css",
+		".scss":     "scss",
+		".sass":     "sass",
+		".less":     "less",
+		".json":     "json",
+		".xml":      "xml",
+		".yaml":     "yaml",
+		".yml":      "yaml",
+		".toml":     "toml",
+		".ini":      "ini",
+		".sh":       "bash",
+		".bash":     "bash",
+		".zsh":      "zsh",
+		".fish":     "fish",
+		".ps1":      "powershell",
+		".bat":      "batch",
+		".cmd":      "batch",
+		".c":        "c",
+		".cpp":      "cpp",
+		".cc":       "cpp",
+		".cxx":      "cpp",
+		".h":        "c",
+		".hpp":      "cpp",
+		".hxx":      "cpp",
+		".java":     "java",
+		".kt":       "kotlin",
+		".scala":    "scala",
+		".clj":      "clojure",
+		".cljs":     "clojure",
+		".rb":       "ruby",
+		".php":      "php",
+		".pl":       "perl",
+		".r":        "r",
+		".sql":      "sql",
+		".vim":      "vim",
+		".lua":      "lua",
+		".dart":     "dart",
+		".swift":    "swift",
+		".rs":       "rust",
+		".md":       "markdown",
+		".markdown": "markdown",
+		".rst":      "rst",
+		".adoc":     "asciidoc",
+		".txt":      "text",
+	}
+
+	if lang, exists := langMap[ext]; exists {
+		return lang
+	}
+
+	// 检查一些特殊的文件名
+	base := strings.ToLower(filepath.Base(filePath))
+	if base == "dockerfile" {
+		return "dockerfile"
+	}
+	if base == "makefile" {
+		return "makefile"
+	}
+
+	return "text"
 }

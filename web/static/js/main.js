@@ -11,6 +11,19 @@ const newSessionBtn = document.getElementById('newSessionBtn');
 const sessionsList = document.getElementById('sessionsList');
 const toolsList = document.getElementById('toolsList');
 
+// File browser elements
+const fileBrowserPanel = document.getElementById('fileBrowserPanel');
+const fileBrowserToggle = document.getElementById('fileBrowserToggle');
+const fileTree = document.getElementById('fileTree');
+const currentPath = document.getElementById('currentPath');
+const refreshTreeBtn = document.getElementById('refreshTreeBtn');
+const fileViewer = document.getElementById('fileViewer');
+const fileName = document.getElementById('fileName');
+const fileMeta = document.getElementById('fileMeta');
+const fileCode = document.getElementById('fileCode');
+const closeFileBtn = document.getElementById('closeFileBtn');
+const chatSection = document.getElementById('chatSection');
+
 
 // State
 let sessionId = '';
@@ -18,6 +31,8 @@ let isStreaming = true;
 let currentStreamingMessage = null;
 let sessions = [];
 let tools = [];
+let fileTreeData = null;
+let currentWorkingPath = '';
 
 // Voice manager instance
 let voiceManager = null;
@@ -28,6 +43,7 @@ let voiceManager = null;
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
     loadTools();
+    loadFileTree();
 
     setupEventListeners();
     // Initialize voice manager
@@ -35,7 +51,9 @@ document.addEventListener('DOMContentLoaded', function() {
         voiceManager = new window.VoiceManager();
         voiceManager.init({
             messageInput: messageInput,
-            sendMessageCallback: sendMessage
+            sendMessageCallback: sendMessage,
+            onVoiceStart: restoreChatLayout,
+            onVoiceEnd: restorePreviousLayout
         });
     }
     messageInput.focus();
@@ -72,6 +90,11 @@ function setupEventListeners() {
     });
 
     newSessionBtn.addEventListener('click', startNewSession);
+    
+    // File browser event listeners
+    fileBrowserToggle.addEventListener('click', toggleFileBrowser);
+    refreshTreeBtn.addEventListener('click', loadFileTree);
+    closeFileBtn.addEventListener('click', closeFileViewer);
     
     // Voice button event listener is handled by voice manager
 }
@@ -353,4 +376,242 @@ async function checkHealth() {
 
 // Check health on load
 checkHealth();
+
+// File Browser Functions
+
+// Load file tree from server
+async function loadFileTree() {
+    try {
+        refreshTreeBtn.disabled = true;
+        refreshTreeBtn.textContent = '🔄';
+        fileTree.innerHTML = '<div class="loading">加载目录结构中...</div>';
+        
+        const response = await fetch('/api/files/tree');
+        const data = await response.json();
+        
+        if (response.ok && data.tree) {
+            fileTreeData = data.tree;
+            currentWorkingPath = data.path;
+            currentPath.textContent = data.path;
+            renderFileTree();
+        } else {
+            fileTree.innerHTML = '<div class="error">加载失败</div>';
+        }
+    } catch (error) {
+        console.error('Failed to load file tree:', error);
+        fileTree.innerHTML = '<div class="error">网络错误</div>';
+    } finally {
+        refreshTreeBtn.disabled = false;
+        refreshTreeBtn.textContent = '🔄';
+    }
+}
+
+// Render file tree in the UI
+function renderFileTree() {
+    if (!fileTreeData) {
+        fileTree.innerHTML = '<div class="error">无数据</div>';
+        return;
+    }
+    
+    fileTree.innerHTML = '';
+    const treeElement = createFileTreeElement(fileTreeData, 0);
+    fileTree.appendChild(treeElement);
+}
+
+// Create file tree DOM element recursively
+function createFileTreeElement(node, depth) {
+    const div = document.createElement('div');
+    div.className = `file-node ${node.type}-node`;
+    div.style.paddingLeft = `${depth * 12}px`;
+    
+    const content = document.createElement('div');
+    content.className = 'file-node-content';
+    
+    if (node.type === 'directory') {
+        const icon = document.createElement('span');
+        icon.className = 'folder-icon';
+        icon.textContent = node.children && node.children.length > 0 ? '📁' : '📂';
+        
+        const name = document.createElement('span');
+        name.className = 'file-name';
+        name.textContent = node.name;
+        
+        content.appendChild(icon);
+        content.appendChild(name);
+        
+        // 添加点击事件来折叠/展开目录
+        content.addEventListener('click', () => {
+            const childrenDiv = div.querySelector('.file-children');
+            if (childrenDiv) {
+                const isVisible = childrenDiv.style.display !== 'none';
+                childrenDiv.style.display = isVisible ? 'none' : 'block';
+                icon.textContent = isVisible ? '📂' : '📁';
+            }
+        });
+        
+        div.appendChild(content);
+        
+        // 添加子节点
+        if (node.children && node.children.length > 0) {
+            const childrenDiv = document.createElement('div');
+            childrenDiv.className = 'file-children';
+            
+            node.children.forEach(child => {
+                const childElement = createFileTreeElement(child, depth + 1);
+                childrenDiv.appendChild(childElement);
+            });
+            
+            div.appendChild(childrenDiv);
+        }
+    } else {
+        const icon = document.createElement('span');
+        icon.className = 'file-icon';
+        icon.textContent = getFileIcon(node.name);
+        
+        const name = document.createElement('span');
+        name.className = 'file-name';
+        name.textContent = node.name;
+        
+        content.appendChild(icon);
+        content.appendChild(name);
+        
+        // 添加点击事件来查看文件
+        content.addEventListener('click', () => {
+            loadFileContent(node.path);
+        });
+        
+        div.appendChild(content);
+    }
+    
+    return div;
+}
+
+// Get file icon based on file extension
+function getFileIcon(fileName) {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    
+    const iconMap = {
+        'js': '📄',
+        'ts': '📘',
+        'jsx': '⚛️',
+        'tsx': '⚛️',
+        'go': '🐹',
+        'py': '🐍',
+        'java': '☕',
+        'html': '🌐',
+        'css': '🎨',
+        'scss': '🎨',
+        'sass': '🎨',
+        'json': '📋',
+        'xml': '📄',
+        'yaml': '📄',
+        'yml': '📄',
+        'md': '📝',
+        'txt': '📄',
+        'sh': '⚡',
+        'bat': '⚡',
+        'sql': '🗃️',
+        'dockerfile': '🐳',
+        'makefile': '🔧',
+    };
+    
+    return iconMap[ext] || '📄';
+}
+
+// Load and display file content
+async function loadFileContent(filePath) {
+    try {
+        const response = await fetch(`/api/files/content?path=${encodeURIComponent(filePath)}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayFileContent(data);
+        } else {
+            console.error('Failed to load file content:', data.error);
+            alert(`无法加载文件: ${data.error}`);
+        }
+    } catch (error) {
+        console.error('Failed to load file content:', error);
+        alert('网络错误，无法加载文件内容');
+    }
+}
+
+// Display file content in the viewer
+function displayFileContent(fileData) {
+    fileName.textContent = fileData.path.split('/').pop();
+    fileMeta.textContent = `${formatFileSize(fileData.size)} | ${fileData.mod_time}`;
+    
+    // 设置代码内容和语言高亮
+    fileCode.textContent = fileData.content;
+    fileCode.className = `language-${fileData.language}`;
+    
+    // 如果有 Prism.js 或其他语法高亮库，可以在这里调用
+    if (window.Prism) {
+        window.Prism.highlightElement(fileCode);
+    }
+    
+    // 显示文件查看器并缩小聊天区域
+    fileViewer.style.display = 'block';
+    adjustLayoutForFileViewer(true);
+}
+
+// Close file viewer
+function closeFileViewer() {
+    fileViewer.style.display = 'none';
+    adjustLayoutForFileViewer(false);
+}
+
+// Toggle file browser panel
+function toggleFileBrowser() {
+    const isCollapsed = fileBrowserPanel.classList.contains('collapsed');
+    fileBrowserPanel.classList.toggle('collapsed', !isCollapsed);
+    fileBrowserToggle.textContent = isCollapsed ? '📌' : '📁';
+}
+
+// Adjust layout when file viewer is shown/hidden
+function adjustLayoutForFileViewer(showFileViewer) {
+    if (showFileViewer) {
+        chatSection.classList.add('with-file-viewer');
+        fileViewer.style.display = 'block';
+    } else {
+        chatSection.classList.remove('with-file-viewer');
+        fileViewer.style.display = 'none';
+    }
+}
+
+// Restore chat layout (called when voice is activated)
+function restoreChatLayout() {
+    // 如果正在查看文件，暂时隐藏文件查看器
+    const wasFileViewerVisible = fileViewer.style.display !== 'none';
+    if (wasFileViewerVisible) {
+        adjustLayoutForFileViewer(false);
+        // 存储状态，以便稍后恢复
+        fileViewer.dataset.wasVisible = 'true';
+    }
+}
+
+// Restore previous layout (called when voice interaction ends)
+function restorePreviousLayout() {
+    // 如果之前有打开的文件查看器，恢复显示
+    if (fileViewer.dataset.wasVisible === 'true') {
+        adjustLayoutForFileViewer(true);
+        delete fileViewer.dataset.wasVisible;
+    }
+}
+
+// Legacy function for compatibility
+function adjustChatContainerHeight() {
+    adjustLayoutForFileViewer(fileViewer.style.display !== 'none');
+}
+
+// Format file size for display
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
 

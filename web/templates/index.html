@@ -23,46 +23,82 @@
     </div>
 
     <div class="main-container">
-        <div class="chat-section">
-            <div class="chat-container" id="chatContainer">
-                <div class="message system-message">
-                    <div class="message-content">
-                        <strong>🤖 NaLa Coder</strong>
-                        <br>你好！我是你的AI编程助手。我可以帮助你：
-                        <br>• 🛠️ 各种开发任务　• 🔍 搜索代码　• 💻 执行系统命令
-                        <br>• 你可以说"小助手"来唤起我，然后告诉我你要做什么。
-                    </div>
-                    <div class="message-meta">系统消息</div>
+        <!-- 左侧文件浏览器 -->
+        <div class="file-browser-panel" id="fileBrowserPanel">
+            <div class="panel-header">
+                <h3>📁 文件浏览器</h3>
+                <button class="panel-toggle-btn" id="fileBrowserToggle" title="收起/展开">📌</button>
+            </div>
+            <div class="file-browser-container">
+                <div class="file-browser-header">
+                    <button class="refresh-btn" id="refreshTreeBtn" title="刷新目录树">🔄</button>
+                    <span class="current-path" id="currentPath">加载中...</span>
+                </div>
+                <div class="file-tree" id="fileTree">
+                    <div class="loading">加载目录结构中...</div>
                 </div>
             </div>
-            
-            <div class="input-section">
-                <div class="input-container">
-                    <textarea class="message-input" id="messageInput" placeholder="输入你的消息..." rows="1"></textarea>
-                    <div class="voice-button-container">
-                        <button class="voice-button" id="voiceButton" title="语音输入">
-                            <div class="voice-waves">
-                                <div class="wave wave-1"></div>
-                                <div class="wave wave-2"></div>
-                                <div class="wave wave-3"></div>
-                                <div class="wave wave-4"></div>
-                                <div class="wave wave-5"></div>
-                            </div>
-                        </button>
-                    </div>
-                    <button class="send-button" id="sendButton">发送</button>
-                </div>
-                <div class="voice-status" id="voiceStatus" style="display: none;">
-                    <span class="voice-indicator" id="voiceIndicator">🔴</span>
-                    <span class="voice-text" id="voiceText">准备中...</span>
-                </div>
-            </div>
-            
-            <div class="status" id="status">就绪</div>
         </div>
 
+        <!-- 中间内容区域 -->
+        <div class="content-area">
+            <!-- 文件查看器 -->
+            <div class="file-viewer" id="fileViewer" style="display: none;">
+                <div class="file-viewer-header">
+                    <div class="file-info">
+                        <span class="file-name" id="fileName">文件名</span>
+                        <span class="file-meta" id="fileMeta">大小 | 修改时间</span>
+                    </div>
+                    <button class="close-file-btn" id="closeFileBtn" title="关闭文件">✕</button>
+                </div>
+                <div class="file-content" id="fileContent">
+                    <pre><code id="fileCode"></code></pre>
+                </div>
+            </div>
+
+            <!-- 聊天区域 -->
+            <div class="chat-section" id="chatSection">
+                <div class="chat-container" id="chatContainer">
+                    <div class="message system-message">
+                        <div class="message-content">
+                            <strong>🤖 NaLa Coder</strong>
+                            <br>你好！我是你的AI编程助手。我可以帮助你：
+                            <br>• 🛠️ 各种开发任务　• 🔍 搜索代码　• 💻 执行系统命令
+                            <br>• 你可以说"小助手"来唤起我，然后告诉我你要做什么。
+                        </div>
+                        <div class="message-meta">系统消息</div>
+                    </div>
+                </div>
+                
+                <div class="input-section">
+                    <div class="input-container">
+                        <textarea class="message-input" id="messageInput" placeholder="输入你的消息..." rows="1"></textarea>
+                        <div class="voice-button-container">
+                            <button class="voice-button" id="voiceButton" title="语音输入">
+                                <div class="voice-waves">
+                                    <div class="wave wave-1"></div>
+                                    <div class="wave wave-2"></div>
+                                    <div class="wave wave-3"></div>
+                                    <div class="wave wave-4"></div>
+                                    <div class="wave wave-5"></div>
+                                </div>
+                            </button>
+                        </div>
+                        <button class="send-button" id="sendButton">发送</button>
+                    </div>
+                    <div class="voice-status" id="voiceStatus" style="display: none;">
+                        <span class="voice-indicator" id="voiceIndicator">🔴</span>
+                        <span class="voice-text" id="voiceText">准备中...</span>
+                    </div>
+                </div>
+                
+                <div class="status" id="status">就绪</div>
+            </div>
+        </div>
+
+        <!-- 右侧工具栏 -->
         <div class="sidebar" id="sidebar" style="display: none;">
-            <div>
+            <div class="sidebar-section">
                 <h3>📋 会话管理</h3>
                 <button class="new-session-btn" id="newSessionBtn">新建会话</button>
                 <div class="sessions-list" id="sessionsList">
@@ -70,7 +106,7 @@
                 </div>
             </div>
 
-            <div>
+            <div class="sidebar-section">
                 <h3>🛠️ 可用工具</h3>
                 <div class="tools-list" id="toolsList">
                     <div class="tool-item">加载中...</div>

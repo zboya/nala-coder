@@ -31,6 +31,8 @@ class VoiceManager {
         // External dependencies
         this.messageInput = null;
         this.sendMessageCallback = null;
+        this.onVoiceStart = null;
+        this.onVoiceEnd = null;
     }
     
     // Initialize voice manager
@@ -45,6 +47,8 @@ class VoiceManager {
         // Set external dependencies
         this.messageInput = options.messageInput || document.getElementById('messageInput');
         this.sendMessageCallback = options.sendMessageCallback;
+        this.onVoiceStart = options.onVoiceStart;
+        this.onVoiceEnd = options.onVoiceEnd;
         
         // Setup event listeners
         if (this.voiceButton) {
@@ -460,6 +464,11 @@ class VoiceManager {
             this.updateVoiceStatus('🎤', '正在录音...');
             this.showVoiceStatus();
             
+            // 语音激活时恢复聊天布局
+            if (this.onVoiceStart && typeof this.onVoiceStart === 'function') {
+                this.onVoiceStart();
+            }
+            
             // Set timeout for voice input
             this.voiceTimeoutId = setTimeout(() => {
                 this.stopVoiceInput();
@@ -568,6 +577,11 @@ class VoiceManager {
         setTimeout(() => {
             this.hideVoiceStatus();
             this.startWakeListening();
+            
+            // 语音结束时恢复之前的布局
+            if (this.onVoiceEnd && typeof this.onVoiceEnd === 'function') {
+                this.onVoiceEnd();
+            }
         }, 300); // 快速重新开始唤醒监听
         
         console.log('Voice input stopped');
