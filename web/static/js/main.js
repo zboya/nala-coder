@@ -11,6 +11,7 @@ const newSessionBtn = document.getElementById('newSessionBtn');
 const sessionsList = document.getElementById('sessionsList');
 const toolsList = document.getElementById('toolsList');
 const voiceButton = document.getElementById('voiceButton');
+const voiceButtonContainer = document.querySelector('.voice-button-container');
 const voiceStatus = document.getElementById('voiceStatus');
 const voiceIndicator = document.getElementById('voiceIndicator');
 const voiceText = document.getElementById('voiceText');
@@ -31,7 +32,7 @@ let isVoiceInputActive = false;
 let voiceTimeoutId = null;
 
 // Voice configuration (will be loaded from server)
-let WAKE_WORDS = ['小助手', '助手', 'hello', 'hey']; // 默认值
+let WAKE_WORDS = ['nala', 'nala coder', '小助手', '助手']; // 默认值
 let WAKE_TIMEOUT = 30000; // 30 seconds
 let VOICE_LANG = 'zh-CN';
 
@@ -461,6 +462,7 @@ function initializeWakeWordRecognition() {
         console.log('Wake word recognition started');
         updateVoiceStatus('🔊', '等待唤醒词...');
         voiceButton.classList.add('wake-listening');
+        if (voiceButtonContainer) voiceButtonContainer.classList.add('wake-listening');
     };
     
     wakeWordRecognition.onresult = function(event) {
@@ -494,6 +496,7 @@ function initializeWakeWordRecognition() {
             console.warn('Microphone permission denied by user');
             isWakeListening = false;
             voiceButton.classList.remove('wake-listening');
+            if (voiceButtonContainer) voiceButtonContainer.classList.remove('wake-listening');
             voiceButton.disabled = true;
             voiceButton.title = '麦克风权限被拒绝，请在浏览器设置中允许麦克风访问';
             updateVoiceStatus('🚫', '麦克风权限被拒绝');
@@ -517,6 +520,7 @@ function initializeWakeWordRecognition() {
             // Don't automatically restart for unknown errors
             isWakeListening = false;
             voiceButton.classList.remove('wake-listening');
+            if (voiceButtonContainer) voiceButtonContainer.classList.remove('wake-listening');
         }
     };
     
@@ -532,6 +536,7 @@ function initializeWakeWordRecognition() {
         } else {
             // Clear the wake listening state if we shouldn't restart
             voiceButton.classList.remove('wake-listening');
+            if (voiceButtonContainer) voiceButtonContainer.classList.remove('wake-listening');
             hideVoiceStatus();
         }
     };
@@ -620,6 +625,7 @@ function stopWakeListening() {
     try {
         wakeWordRecognition.stop();
         voiceButton.classList.remove('wake-listening');
+        if (voiceButtonContainer) voiceButtonContainer.classList.remove('wake-listening');
         console.log('Stopped wake word listening');
     } catch (error) {
         console.error('Failed to stop wake word listening:', error);
@@ -656,6 +662,7 @@ function retryVoicePermission() {
     voiceButton.disabled = false;
     voiceButton.title = '语音输入';
     voiceButton.classList.remove('wake-listening');
+    if (voiceButtonContainer) voiceButtonContainer.classList.remove('wake-listening');
     hideVoiceStatus();
     
     // Try to re-request microphone permission
@@ -681,6 +688,10 @@ function startVoiceInput() {
         isVoiceInputActive = true;
         voiceButton.classList.add('active');
         voiceButton.classList.remove('wake-listening');
+        if (voiceButtonContainer) {
+            voiceButtonContainer.classList.add('active');
+            voiceButtonContainer.classList.remove('wake-listening');
+        }
         updateVoiceStatus('🎤', '正在录音...');
         showVoiceStatus();
         
@@ -770,6 +781,7 @@ function stopVoiceInput() {
     
     isVoiceInputActive = false;
     voiceButton.classList.remove('active');
+    if (voiceButtonContainer) voiceButtonContainer.classList.remove('active');
     
     if (voiceTimeoutId) {
         clearTimeout(voiceTimeoutId);

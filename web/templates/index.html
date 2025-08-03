@@ -39,7 +39,17 @@
             <div class="input-section">
                 <div class="input-container">
                     <textarea class="message-input" id="messageInput" placeholder="输入你的消息..." rows="1"></textarea>
-                    <button class="voice-button" id="voiceButton" title="语音输入">🎤</button>
+                    <div class="voice-button-container">
+                        <button class="voice-button" id="voiceButton" title="语音输入">
+                            <div class="voice-waves">
+                                <div class="wave wave-1"></div>
+                                <div class="wave wave-2"></div>
+                                <div class="wave wave-3"></div>
+                                <div class="wave wave-4"></div>
+                                <div class="wave wave-5"></div>
+                            </div>
+                        </button>
+                    </div>
                     <button class="send-button" id="sendButton">发送</button>
                 </div>
                 <div class="voice-status" id="voiceStatus" style="display: none;">

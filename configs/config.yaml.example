@@ -100,7 +100,7 @@ mcp:
 speech:
   enabled: true         # 是否启用前端语音识别功能
   # 语音唤醒词配置
-  wake_words: ["小助手", "助手", "hello", "hey"]  # 支持的唤醒词列表
+  wake_words: ["nala","小助手", "助手"]  # 支持的唤醒词列表
   wake_timeout: 30      # 语音输入超时时间（秒）
   language: "zh-CN"     # 语音识别语言
 
