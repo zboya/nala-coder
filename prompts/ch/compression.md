@@ -1,3 +1,7 @@
+<conversation_history>
+{{.conversation_history}}
+</conversation_history>
+
 请按照以下8个结构化段落压缩对话历史：
 
 ## 1. 背景上下文 (Background Context)
