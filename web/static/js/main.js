@@ -537,8 +537,17 @@ function initializeWakeWordRecognition() {
     };
 }
 
+// Global variable to track notification timeout
+let notificationTimeoutId = null;
+
 // Show notification to user
 function showNotification(message, type = 'info') {
+    // Clear any existing timeout
+    if (notificationTimeoutId) {
+        clearTimeout(notificationTimeoutId);
+        notificationTimeoutId = null;
+    }
+    
     // Create notification element if it doesn't exist
     let notification = document.getElementById('voice-notification');
     if (!notification) {
@@ -574,10 +583,19 @@ function showNotification(message, type = 'info') {
     notification.textContent = message;
     notification.style.transform = 'translateX(0)';
     
-    // Auto hide after 5 seconds
-    setTimeout(() => {
-        notification.style.transform = 'translateX(100%)';
-    }, 5000);
+    // Auto hide after 3 seconds (reduced from 5 seconds)
+    notificationTimeoutId = setTimeout(() => {
+        if (notification) {
+            notification.style.transform = 'translateX(100%)';
+            // Clean up after animation completes
+            setTimeout(() => {
+                if (notification && notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300); // Wait for transition to complete
+        }
+        notificationTimeoutId = null;
+    }, 3000);
 }
 
 // Start wake word listening
