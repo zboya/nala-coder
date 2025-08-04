@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { ChatBox } from '@/components/ChatBox';
 import { FileExplorer } from '@/components/FileExplorer';
 import { CodeEditor } from '@/components/CodeEditor';
-import { VoiceAssistant } from '@/components/VoiceAssistant';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { streamChat, getFileTree, getSpeechConfig } from '@/services/api';
+import { streamChat, getFileTree } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 
 interface Message {
@@ -84,10 +83,6 @@ const Index = () => {
     }
   };
 
-  const handleVoiceTranscript = (transcript: string) => {
-    handleSendMessage(transcript);
-  };
-
   const handleFileSelect = (file: FileNode) => {
     if (file.type === 'file') {
       setSelectedFile(file);
@@ -116,9 +111,9 @@ const Index = () => {
   return (
     <div className="h-screen w-full bg-background">
       <ResizablePanelGroup direction="horizontal" className="min-h-screen">
-        {/* 左侧：聊天框和文件浏览器 */}
+        {/* 聊天框和文件浏览器 */}
         <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
-          <ResizablePanelGroup direction="vertical">
+          <ResizablePanelGroup direction="horizontal">
             {/* 聊天框 */}
             <ResizablePanel defaultSize={60} minSize={30}>
               <ChatBox 
@@ -142,14 +137,11 @@ const Index = () => {
 
         <ResizableHandle withHandle />
 
-        {/* 右侧：代码编辑器 */}
+        {/* 代码编辑器 */}
         <ResizablePanel defaultSize={65} minSize={50}>
           <CodeEditor selectedFile={selectedFile} />
         </ResizablePanel>
       </ResizablePanelGroup>
-
-      {/* 悬浮语音助手 */}
-      <VoiceAssistant onTranscript={handleVoiceTranscript} />
     </div>
   );
 };

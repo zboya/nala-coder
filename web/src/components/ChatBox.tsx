@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { getSpeechConfig } from '@/services/api';
+import { cn } from '@/lib/utils';
 
 interface Message {
   id: string;
@@ -21,8 +24,56 @@ interface ChatBoxProps {
 export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [wakeWord, setWakeWord] = useState('小助手');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 语音识别功能
+  const {
+    isListening,
+    isWakeWordListening,
+    isAwake,
+    transcript,
+    error,
+    sleep,
+    resetTranscript
+  } = useSpeechRecognition();
+
+  // 加载语音配置
+  useEffect(() => {
+    const loadSpeechConfig = async () => {
+      try {
+        const config = await getSpeechConfig();
+        if (config.wake_words && config.wake_words.length > 0) {
+          setWakeWord(config.wake_words[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load speech config:', error);
+        // 使用默认唤醒词
+      }
+    };
+
+    loadSpeechConfig();
+  }, []);
+
+  // 处理语音转录结果
+  useEffect(() => {
+    if (transcript && transcript.trim()) {
+      setInput(transcript);
+      resetTranscript();
+      sleep();
+    }
+  }, [transcript, resetTranscript, sleep]);
+
+  // 处理动画状态
+  useEffect(() => {
+    if (isListening || isWakeWordListening) {
+      setIsAnimating(true);
+    } else {
+      setIsAnimating(false);
+    }
+  }, [isListening, isWakeWordListening]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -43,6 +94,18 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const getVoiceIcon = () => {
+    if (isAwake && isListening) return <Volume2 className="h-4 w-4" />;
+    if (isWakeWordListening) return <Mic className="h-4 w-4" />;
+    return <MicOff className="h-4 w-4" />;
+  };
+
+  const getVoiceTooltip = () => {
+    if (isAwake && isListening) return '正在听...';
+    if (isWakeWordListening) return `等待唤醒词"${wakeWord}"`;
+    return '语音助手';
   };
 
   // 自动滚动到底部
@@ -145,6 +208,22 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
 
       {/* 输入框 */}
       <div className="p-4 border-t bg-card">
+        {/* 语音状态提示 */}
+        {(transcript || error) && (
+          <div className="mb-2">
+            {transcript && (
+              <div className="bg-accent text-accent-foreground px-3 py-2 rounded-lg text-sm mb-1">
+                转录中: {transcript}
+              </div>
+            )}
+            {error && (
+              <div className="bg-destructive text-destructive-foreground px-3 py-1 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+          </div>
+        )}
+        
         <div className="flex gap-2 items-end">
           <Textarea
             ref={textareaRef}
@@ -155,6 +234,27 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
             className="min-h-[40px] max-h-[120px] resize-none"
             disabled={isLoading}
           />
+          
+          {/* 语音助手按钮 */}
+          <Button
+            onClick={sleep}
+            disabled={!isWakeWordListening && !isAwake}
+            size="icon"
+            variant="outline"
+            className={cn(
+              "h-10 w-10 shrink-0 transition-all duration-300",
+              isAnimating && "scale-110",
+              isAwake && "bg-accent hover:bg-accent/90"
+            )}
+            title={getVoiceTooltip()}
+          >
+            {isAnimating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              getVoiceIcon()
+            )}
+          </Button>
+          
           <Button
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
