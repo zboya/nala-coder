@@ -8,7 +8,7 @@ interface UseSpeechRecognitionOptions {
 
 export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) => {
   const {
-    wakeWords = ['小助手', '助手'],
+    wakeWords = ['小娜', '小助手'],
     lang = 'zh-CN',
     continuous = true
   } = options;

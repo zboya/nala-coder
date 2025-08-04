@@ -11,7 +11,8 @@ interface VoiceAssistantProps {
 
 export const VoiceAssistant = ({ onTranscript }: VoiceAssistantProps) => {
   const [isAnimating, setIsAnimating] = useState(false);
-  const [wakeWords, setWakeWords] = useState<string[]>(['小娜','小助手']);
+  const [wakeWords, setWakeWords] = useState<string[]>(['小娜', '小助手']);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   // 加载语音配置
   useEffect(() => {
@@ -24,6 +25,8 @@ export const VoiceAssistant = ({ onTranscript }: VoiceAssistantProps) => {
       } catch (error) {
         console.error('Failed to load speech config:', error);
         // 使用默认唤醒词
+      } finally {
+        setConfigLoaded(true);
       }
     };
 
@@ -38,7 +41,9 @@ export const VoiceAssistant = ({ onTranscript }: VoiceAssistantProps) => {
     error,
     sleep,
     resetTranscript
-  } = useSpeechRecognition({ wakeWords });
+  } = useSpeechRecognition({
+    wakeWords: configLoaded ? wakeWords : ['小娜', '小助手']
+  });
 
   useEffect(() => {
     if (transcript && transcript.trim()) {

@@ -439,7 +439,7 @@ func (s *HTTPServer) handleGetSpeechConfig(c *gin.Context) {
 
 	// 设置默认值
 	if len(config.WakeWords) == 0 {
-		config.WakeWords = []string{"小助手", "助手"}
+		config.WakeWords = []string{"小娜", "小助手"}
 	}
 	if config.WakeTimeout == 0 {
 		config.WakeTimeout = 30

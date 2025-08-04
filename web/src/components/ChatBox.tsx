@@ -6,7 +6,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
-import { getSpeechConfig } from '@/services/api';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -25,7 +24,6 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [wakeWord, setWakeWord] = useState('小娜');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -39,23 +37,6 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
     sleep,
     resetTranscript
   } = useSpeechRecognition();
-
-  // 加载语音配置
-  useEffect(() => {
-    const loadSpeechConfig = async () => {
-      try {
-        const config = await getSpeechConfig();
-        if (config.wake_words && config.wake_words.length > 0) {
-          setWakeWord(config.wake_words[0]);
-        }
-      } catch (error) {
-        console.error('Failed to load speech config:', error);
-        // 使用默认唤醒词
-      }
-    };
-
-    loadSpeechConfig();
-  }, []);
 
   // 处理语音转录结果
   useEffect(() => {
@@ -126,7 +107,7 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
 
   const getVoiceTooltip = () => {
     if (isAwake && isListening) return '正在听...';
-    if (isWakeWordListening) return `等待唤醒词"${wakeWord}"`;
+    if (isWakeWordListening) return '等待唤醒词';
     return '语音助手';
   };
 
@@ -250,7 +231,7 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="输入消息或说'小助手'唤醒语音..."
+            placeholder="输入消息或说'小娜'唤醒语音..."
             className="min-h-[40px] max-h-[120px] resize-none"
             disabled={isLoading}
           />
