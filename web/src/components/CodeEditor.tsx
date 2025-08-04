@@ -476,7 +476,31 @@ export const CodeEditor = ({ selectedFile }: CodeEditorProps) => {
                 selectionHighlight: false,
                 bracketPairColorization: {
                   enabled: true
-                }
+                },
+                // 禁用语法错误检查
+                'semanticHighlighting.enabled': false,
+                quickSuggestions: false,
+                parameterHints: { enabled: false },
+                hover: { enabled: false },
+                contextmenu: false,
+                // 禁用所有诊断信息（错误、警告等）
+                glyphMargin: false,
+                // 禁用错误标记
+                renderValidationDecorations: 'off'
+              }}
+              beforeMount={(monaco) => {
+                // 禁用所有语言的诊断功能
+                monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+                  noSemanticValidation: true,
+                  noSyntaxValidation: true,
+                  noSuggestionDiagnostics: true
+                });
+                
+                monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+                  noSemanticValidation: true,
+                  noSyntaxValidation: true,
+                  noSuggestionDiagnostics: true
+                });
               }}
             />
           )}

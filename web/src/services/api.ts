@@ -87,21 +87,40 @@ export async function streamChat(
   const decoder = new TextDecoder();
 
   try {
+    let buffer = '';
+    
     while (true) {
       const { done, value } = await reader.read();
       
       if (done) break;
       
-      const text = decoder.decode(value);
-      const lines = text.split('\n');
+      const text = decoder.decode(value, { stream: true });
+      buffer += text;
       
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
+      // 按双换行符分割事件
+      const events = buffer.split('\n\n');
+      // 保留最后一个可能不完整的事件
+      buffer = events.pop() || '';
+      
+      for (const event of events) {
+        if (!event.trim()) continue;
+        
+        const lines = event.split('\n');
+        let eventType = '';
+        let eventData = '';
+        
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            eventType = line.substring(6).trim();
+          } else if (line.startsWith('data:')) {
+            eventData = line.substring(5).trim();
+          }
+        }
+        
+        // 处理消息事件
+        if (eventType === 'message' && eventData) {
           try {
-            const jsonStr = line.substring(6);
-            if (jsonStr.trim() === '') continue;
-            
-            const data: ChatStreamResponse = JSON.parse(jsonStr);
+            const data: ChatStreamResponse = JSON.parse(eventData);
             fullResponse += data.response;
             
             if (onChunk) {
@@ -112,8 +131,40 @@ export async function streamChat(
               return fullResponse;
             }
           } catch (e) {
-            console.warn('Failed to parse SSE chunk:', e);
+            console.warn('Failed to parse SSE chunk:', e, 'Data:', eventData);
           }
+        }
+        // 处理结束事件
+        else if (eventType === 'end') {
+          return fullResponse;
+        }
+      }
+    }
+    
+    // 处理缓冲区中剩余的数据
+    if (buffer.trim()) {
+      const lines = buffer.split('\n');
+      let eventType = '';
+      let eventData = '';
+      
+      for (const line of lines) {
+        if (line.startsWith('event:')) {
+          eventType = line.substring(6).trim();
+        } else if (line.startsWith('data:')) {
+          eventData = line.substring(5).trim();
+        }
+      }
+      
+      if (eventType === 'message' && eventData) {
+        try {
+          const data: ChatStreamResponse = JSON.parse(eventData);
+          fullResponse += data.response;
+          
+          if (onChunk) {
+            onChunk(data);
+          }
+        } catch (e) {
+          console.warn('Failed to parse final SSE chunk:', e);
         }
       }
     }

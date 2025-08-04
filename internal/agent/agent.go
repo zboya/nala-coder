@@ -241,6 +241,7 @@ func (a *Agent) runAgentLoopStream(ctx context.Context, sessionID string, respon
 		// 调用LLM流式API
 		llmStream, err := a.llmManager.ChatStream(ctx, *llmRequest)
 		if err != nil {
+			a.logger.Errorf("LLM stream call failed: %v", err)
 			return totalUsage, fmt.Errorf("LLM stream call failed: %w", err)
 		}
 

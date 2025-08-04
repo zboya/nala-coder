@@ -165,13 +165,13 @@ export const FileExplorer = ({
   };
 
   return (
-    <div className="h-full bg-background border-r">
-      <div className="p-4 border-b bg-card">
+    <div className="h-full bg-background border-r flex flex-col">
+      <div className="p-4 border-b bg-card flex-shrink-0">
         <h2 className="text-lg font-semibold text-card-foreground">项目文件</h2>
         <p className="text-sm text-muted-foreground">浏览和编辑项目文件</p>
       </div>
       
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 h-0">
         <div className="p-2">
           {files.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">

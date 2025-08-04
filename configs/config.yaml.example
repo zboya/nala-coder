@@ -13,7 +13,7 @@ llm:
   # OpenAI 配置
   openai:
     api_key: "your-openai-api-key-here"
-    base_url: "https://api.openai.com/v1"
+    base_url: "https://api.openai.com/v1/"
     model: "gpt-4"
     max_tokens: 8192
     temperature: 0.3
@@ -21,7 +21,7 @@ llm:
   # DeepSeek 配置  
   deepseek:
     api_key: "your-deepseek-api-key-here"
-    base_url: "https://api.deepseek.com"
+    base_url: "https://api.deepseek.com/"
     model: "deepseek-chat"
     max_tokens: 8192
     temperature: 0.3
@@ -29,14 +29,14 @@ llm:
   # Claude 配置
   claude:
     api_key: "your-claude-api-key-here"
-    base_url: "https://api.anthropic.com"
+    base_url: "https://api.anthropic.com/"
     model: "claude-3-sonnet-20240229"
     max_tokens: 8192
     temperature: 0.3
     
   # Ollama 配置
   ollama:
-    base_url: "http://localhost:11434"
+    base_url: "http://localhost:11434/"
     model: "llama2"
     max_tokens: 8192
     temperature: 0.3
@@ -59,8 +59,6 @@ tools:
     - "grep"
     - "ls"
     - "bash"
-    - "todo_read"
-    - "todo_write"
     - "web_search"
     - "web_fetch"
   
@@ -81,7 +79,7 @@ context:
 
 # 提示词配置
 prompts:
-  directory: "./prompts"
+  directory: "./prompts/en"
   hot_reload: true
 
 # 日志配置
@@ -100,7 +98,7 @@ mcp:
 speech:
   enabled: true         # 是否启用前端语音识别功能
   # 语音唤醒词配置
-  wake_words: ["nala","小助手", "助手"]  # 支持的唤醒词列表
+  wake_words: ["小助手", "助手"]  # 支持的唤醒词列表
   wake_timeout: 30      # 语音输入超时时间（秒）
   language: "zh-CN"     # 语音识别语言
 
