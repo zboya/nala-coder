@@ -1,10 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-interface SpeechRecognitionResult {
-  transcript: string;
-  confidence: number;
-}
-
 interface UseSpeechRecognitionOptions {
   wakeWords?: string | string[];
   lang?: string;
@@ -13,7 +8,7 @@ interface UseSpeechRecognitionOptions {
 
 export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) => {
   const {
-    wakeWords = ['小助手', '你好助手', 'hey assistant'],
+    wakeWords = ['小助手', '助手'],
     lang = 'zh-CN',
     continuous = true
   } = options;
@@ -31,10 +26,24 @@ export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) 
   const wakeWordRecognitionRef = useRef<any>(null);
   const isStartingRef = useRef(false);
   const wakeWordStartingRef = useRef(false);
+  const isAwakeRef = useRef(false);
+  const isWakeWordListeningRef = useRef(false);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSpeechTimeRef = useRef<number>(0);
+  const isProcessingRef = useRef(false);
+
+  // 同步 ref 和 state
+  useEffect(() => {
+    isAwakeRef.current = isAwake;
+  }, [isAwake]);
+
+  useEffect(() => {
+    isWakeWordListeningRef.current = isWakeWordListening;
+  }, [isWakeWordListening]);
 
   const startWakeWordListening = useCallback(() => {
     console.log('🎤 [Wake Word] Attempting to start wake word listening...');
-    
+
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       console.error('❌ [Wake Word] Browser does not support speech recognition');
       setError('浏览器不支持语音识别');
@@ -42,7 +51,7 @@ export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) 
     }
 
     // 防止重复启动
-    if (wakeWordStartingRef.current || isWakeWordListening) {
+    if (wakeWordStartingRef.current || isWakeWordListeningRef.current) {
       console.warn('⚠️ [Wake Word] Already starting or listening, skipping...');
       return;
     }
@@ -81,7 +90,7 @@ export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) 
         if (result.isFinal) {
           const text = result[0].transcript.trim();
           console.log(`📝 [Wake Word] Final transcript: "${text}"`);
-          
+
           // 检查是否包含任何一个唤醒词
           const detectedWakeWord = wakeWordList.find(word => text.includes(word));
           if (detectedWakeWord) {
@@ -115,19 +124,25 @@ export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) 
       console.log('🏁 [Wake Word] Wake word recognition ended');
       setIsWakeWordListening(false);
       wakeWordStartingRef.current = false;
-      if (!isAwake) {
-        console.log('💤 [Wake Word] Assistant not awake, restarting wake word listening in 1s...');
-        // 重新开始监听唤醒词，添加延迟避免重复启动
-        setTimeout(() => {
-          if (!wakeWordStartingRef.current && !isWakeWordListening && !isAwake) {
-            startWakeWordListening();
-          }
-        }, 1000);
-      }
+
+      // 使用 setTimeout 确保状态更新完成后再检查
+      setTimeout(() => {
+        if (!isAwakeRef.current && !wakeWordStartingRef.current) {
+          console.log('💤 [Wake Word] Assistant not awake, restarting wake word listening in 1s...');
+          // 重新开始监听唤醒词，添加延迟避免重复启动
+          setTimeout(() => {
+            if (!wakeWordStartingRef.current && !isAwakeRef.current) {
+              startWakeWordListening();
+            }
+          }, 1000);
+        } else {
+          console.log('🎉 [Wake Word] Assistant is awake, not restarting wake word listening');
+        }
+      }, 100);
     };
 
     wakeWordRecognitionRef.current = recognition;
-    
+
     try {
       recognition.start();
     } catch (error) {
@@ -135,11 +150,11 @@ export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) 
       setError('启动唤醒词识别失败');
       wakeWordStartingRef.current = false;
     }
-  }, [wakeWordList, lang, isAwake, isWakeWordListening]);
+  }, [wakeWordList, lang]);
 
   const startListening = useCallback(() => {
     console.log('🎤 [Speech] Attempting to start speech recognition...');
-    
+
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       console.error('❌ [Speech] Browser does not support speech recognition');
       setError('浏览器不支持语音识别');
@@ -198,6 +213,40 @@ export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) 
       const currentTranscript = finalTranscript || interimTranscript;
       setTranscript(currentTranscript);
       console.log(`🔄 [Speech] Updated transcript: "${currentTranscript}"`);
+
+      // 更新最后说话时间
+      lastSpeechTimeRef.current = Date.now();
+
+      // 清除之前的静音计时器
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        console.log('⏰ [Speech] Cleared previous silence timer');
+      }
+
+      // 如果有实际内容，设置静音检测计时器
+      if (currentTranscript.trim()) {
+        console.log('⏰ [Speech] Setting silence timer for 3 seconds...');
+        silenceTimerRef.current = setTimeout(() => {
+          const timeSinceLastSpeech = Date.now() - lastSpeechTimeRef.current;
+          console.log(`🔇 [Speech] Silence detected. Time since last speech: ${timeSinceLastSpeech}ms`);
+
+          if (timeSinceLastSpeech >= 2500) {
+            console.log('✅ [Speech] Speech completed, processing transcript...');
+            isProcessingRef.current = true;
+
+            // 停止语音识别
+            if (recognitionRef.current) {
+              try {
+                recognitionRef.current.stop();
+              } catch (e) {
+                console.warn('⚠️ [Speech] Error stopping recognition after silence:', e);
+              }
+            }
+          } else {
+            console.log('⏰ [Speech] Not enough silence time, continuing to listen...');
+          }
+        }, 3000);
+      }
     };
 
     recognition.onerror = (event) => {
@@ -214,10 +263,23 @@ export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) 
       console.log('🏁 [Speech] Speech recognition ended');
       setIsListening(false);
       isStartingRef.current = false;
+
+      // 清除静音计时器
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+        console.log('⏰ [Speech] Cleared silence timer on recognition end');
+      }
+
+      // 如果是因为处理完成而结束，不需要重新启动
+      if (isProcessingRef.current) {
+        console.log('✅ [Speech] Recognition ended after processing, transcript ready');
+        isProcessingRef.current = false;
+      }
     };
 
     recognitionRef.current = recognition;
-    
+
     try {
       recognition.start();
     } catch (error) {
@@ -240,15 +302,38 @@ export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) 
   }, []);
 
   const resetTranscript = useCallback(() => {
+    // 如果正在处理语音输入，不允许重置
+    if (isListening && !isProcessingRef.current) {
+      console.log('⚠️ [Speech] Cannot reset transcript while actively listening');
+      return;
+    }
     console.log('🔄 [Speech] Resetting transcript');
     setTranscript('');
-  }, []);
+  }, [isListening]);
 
   const sleep = useCallback(() => {
+    // 如果正在处理语音输入且还没有完成，延迟进入睡眠模式
+    if (isListening && !isProcessingRef.current) {
+      console.log('⚠️ [Assistant] Cannot sleep while actively listening, will retry in 2s...');
+      setTimeout(() => {
+        if (!isListening || isProcessingRef.current) {
+          sleep();
+        }
+      }, 2000);
+      return;
+    }
+
     console.log('💤 [Assistant] Going to sleep mode...');
     setIsAwake(false);
     setTranscript('');
-    
+
+    // 清除静音计时器
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+      console.log('⏰ [Assistant] Cleared silence timer on sleep');
+    }
+
     // 停止当前的语音识别
     if (recognitionRef.current) {
       console.log('🛑 [Assistant] Stopping current speech recognition...');
@@ -258,15 +343,15 @@ export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) 
         console.warn('⚠️ [Assistant] Error stopping speech recognition:', e);
       }
     }
-    
+
     // 重新开始监听唤醒词，添加延迟和状态检查
     console.log('🔄 [Assistant] Restarting wake word listening in 1s...');
     setTimeout(() => {
-      if (!wakeWordStartingRef.current && !isWakeWordListening) {
+      if (!wakeWordStartingRef.current && !isWakeWordListeningRef.current) {
         startWakeWordListening();
       }
     }, 1000);
-  }, [startWakeWordListening, isWakeWordListening]);
+  }, [startWakeWordListening, isListening]);
 
   useEffect(() => {
     console.log('🎬 [Init] Initializing speech recognition hook...');
@@ -294,6 +379,12 @@ export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) 
         } catch (e) {
           console.warn('⚠️ [Cleanup] Error stopping speech recognition:', e);
         }
+      }
+
+      // 清理计时器
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        console.log('✅ [Cleanup] Silence timer cleared');
       }
     };
   }, []);

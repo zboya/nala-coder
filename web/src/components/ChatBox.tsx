@@ -59,12 +59,14 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
 
   // 处理语音转录结果
   useEffect(() => {
-    if (transcript && transcript.trim()) {
+    // 只有当语音识别完成（不再监听）且有有效内容时才处理
+    if (transcript && transcript.trim() && !isListening && isAwake) {
+      console.log('📨 [ChatBox] Processing completed speech transcript:', transcript);
       setInput(transcript);
       resetTranscript();
       sleep();
     }
-  }, [transcript, resetTranscript, sleep]);
+  }, [transcript, isListening, isAwake, resetTranscript, sleep]);
 
   // 处理动画状态
   useEffect(() => {
@@ -146,13 +148,12 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
               </p>
             </div>
           )}
-          
+
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex gap-3 ${
-                message.type === 'user' ? 'justify-end' : 'justify-start'
-              }`}
+              className={`flex gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'
+                }`}
             >
               {message.type === 'assistant' && (
                 <Avatar className="h-8 w-8 mt-1">
@@ -161,12 +162,11 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
                   </AvatarFallback>
                 </Avatar>
               )}
-              
-              <Card className={`max-w-[80%] ${
-                message.type === 'user' 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted'
-              }`}>
+
+              <Card className={`max-w-[80%] ${message.type === 'user'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted'
+                }`}>
                 <CardContent className="p-3">
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                   <span className="text-xs opacity-70 mt-1 block">
@@ -223,7 +223,7 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
             )}
           </div>
         )}
-        
+
         <div className="flex gap-2 items-end">
           <Textarea
             ref={textareaRef}
@@ -234,7 +234,7 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
             className="min-h-[40px] max-h-[120px] resize-none"
             disabled={isLoading}
           />
-          
+
           {/* 语音助手按钮 */}
           <Button
             onClick={sleep}
@@ -273,7 +273,7 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
               )}
             </div>
           </Button>
-          
+
           <Button
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
