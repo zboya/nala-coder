@@ -139,13 +139,17 @@ func initConfig() error {
 		if err != nil {
 			return err
 		}
+		home, _ := os.UserHomeDir()
 
+		viper.AddConfigPath(".")                                // 当前目录
+		viper.AddConfigPath(filepath.Join(home, ".nala-coder")) // 用户目录下的nala-coder文件夹
 		viper.AddConfigPath(filepath.Join(cwd, "configs"))
-		viper.AddConfigPath(".")
 		viper.SetConfigName("config")
 		viper.SetConfigType("yaml")
 	}
 
+	viper.SetEnvPrefix("NALA")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	// 环境变量支持
 	viper.AutomaticEnv()
 

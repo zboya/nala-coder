@@ -1,6 +1,6 @@
 # NaLa Coder Makefile
 
-.PHONY: default help build test clean install deps fmt lint build-embedded deploy server build-web build-web-dev install-web clean-web
+.PHONY: default help build test clean install deps fmt lint build-embedded deploy server build-web build-web-dev install-web clean-web init-config
 
 # 默认目标
 default: server
@@ -9,6 +9,7 @@ help:
 	@echo "NaLa Coder - AI-powered coding assistant"
 	@echo ""
 	@echo "Available commands:"
+	@echo "  init-config   - Initialize ~/.nala-coder configuration directory"
 	@echo "  build         - Build all binaries"
 	@echo "  build-embedded- Build binaries with embedded web assets"
 	@echo "  build-web     - Build React application (production)"
@@ -23,6 +24,11 @@ help:
 	@echo "  lint          - Lint code"
 	@echo "  deploy        - Build embedded assets"
 	@echo "  server        - Build embedded assets and start the server"
+
+# 初始化配置目录
+init-config:
+	@echo "Initializing NaLa Coder configuration..."
+	./scripts/init-config.sh
 
 # 构建所有二进制文件
 build:
@@ -44,7 +50,6 @@ clean: clean-web
 
 # 安装二进制文件到系统
 install: build-embedded
-	sudo cp bin/nala-coder-cli /usr/local/bin/
 	sudo cp bin/nala-coder-server /usr/local/bin/
 	@echo "Installed to /usr/local/bin/"
 
@@ -88,15 +93,6 @@ docker-run:
 docs:
 	@echo "API documentation available at /api endpoints when server is running"
 
-# 检查配置
-check-config:
-	@if [ -f "configs/config.yaml" ]; then \
-		echo "✓ Configuration file found"; \
-	else \
-		echo "✗ Configuration file not found. Creating example..."; \
-		cp configs/config.yaml.example configs/config.yaml; \
-	fi
-
 # 构建嵌入式版本（包含所有web资源）
 build-embedded:
 	@echo "Building React application..."
@@ -110,7 +106,7 @@ build-embedded:
 	@echo "Binary size: $(du -h bin/nala-coder-server | cut -f1)"
 
 # 完整部署流程
-deploy: clean check-config install-web build-embedded 
+deploy: clean init-config install-web build-embedded 
 	@echo "🚀 Deployment ready!"
 	@echo "Start the server with: ./bin/nala-coder-server"
 

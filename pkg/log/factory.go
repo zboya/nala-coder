@@ -2,10 +2,25 @@ package log
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
+
+// expandPath 扩展路径，处理 ~ 符号
+func expandPath(path string) string {
+	if strings.HasPrefix(path, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return path // 如果获取失败，返回原路径
+		}
+		return filepath.Join(home, path[2:])
+	}
+	return path
+}
 
 // New 创建一个新的Logger实例
 func New(config *Config) (Logger, error) {
@@ -24,6 +39,11 @@ func NewFromViper() (Logger, error) {
 	// 如果配置为空，使用默认配置
 	if config.Level == "" {
 		config = DefaultConfig()
+	}
+
+	// 扩展日志文件路径，处理 ~ 符号
+	if config.File != "" {
+		config.File = expandPath(config.File)
 	}
 
 	return New(config)
@@ -46,6 +66,11 @@ func NewFromViperWithVerbose(verbose bool) (Logger, error) {
 	// 如果verbose模式开启，设置为debug级别
 	if verbose {
 		config.Level = "debug"
+	}
+
+	// 扩展日志文件路径，处理 ~ 符号
+	if config.File != "" {
+		config.File = expandPath(config.File)
 	}
 
 	return New(config)

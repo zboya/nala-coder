@@ -132,6 +132,18 @@ func AbsPath(path string) (string, error) {
 	return filepath.Abs(path)
 }
 
+// ExpandPath 扩展路径，处理 ~ 符号
+func ExpandPath(path string) string {
+	if strings.HasPrefix(path, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return path // 如果获取失败，返回原路径
+		}
+		return filepath.Join(home, path[2:])
+	}
+	return path
+}
+
 // IsAbsPath 判断是否为绝对路径
 func IsAbsPath(path string) bool {
 	return filepath.IsAbs(path)

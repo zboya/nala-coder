@@ -8,6 +8,7 @@ import (
 	"github.com/zboya/nala-coder/internal/tools"
 	"github.com/zboya/nala-coder/pkg/log"
 	"github.com/zboya/nala-coder/pkg/types"
+	"github.com/zboya/nala-coder/pkg/utils"
 )
 
 // AppConfig 应用程序配置
@@ -79,8 +80,11 @@ func (b *Builder) BuildLLMManager() error {
 
 // BuildPromptManager 构建提示词管理器
 func (b *Builder) BuildPromptManager() error {
+	// 扩展路径，处理 ~ 符号
+	directory := utils.ExpandPath(b.config.Prompts.Directory)
+
 	manager, err := context.NewPromptManager(
-		b.config.Prompts.Directory,
+		directory,
 		b.config.Prompts.HotReload,
 		b.logger,
 	)
@@ -111,8 +115,12 @@ func (b *Builder) BuildContextManager() error {
 		return fmt.Errorf("failed to get compression LLM client: %w", err)
 	}
 
+	// 扩展存储路径，处理 ~ 符号
+	contextConfig := b.config.Context
+	contextConfig.StoragePath = utils.ExpandPath(contextConfig.StoragePath)
+
 	manager, err := context.NewContextManager(
-		&b.config.Context,
+		&contextConfig,
 		b.promptManager,
 		compressionLLM,
 		b.logger,

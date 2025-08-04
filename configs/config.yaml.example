@@ -71,7 +71,7 @@ tools:
 # 上下文管理配置
 context:
   history_limit: 6  # 保留最近6轮对话
-  storage_path: "./storage"
+  storage_path: "~/.nala-coder/storage"
   storage_type: "sqlite"  # 存储类型: sqlite(默认) 或 json
   persistence_file: "CODE_AGENT.md"
   compression_threshold: 0.9
@@ -79,7 +79,7 @@ context:
 
 # 提示词配置
 prompts:
-  directory: "./prompts/en"
+  directory: "~/.nala-coder/prompts"
   hot_reload: true
 
 # 日志配置
@@ -87,7 +87,7 @@ logging:
   level: "info"      # debug, info, warn, error
   format: "text"     # text, json
   output: "both"   # stdout, file, both
-  file: "./logs/nala-coder.log"  # 日志文件路径（当output为file或both时使用）
+  file: "~/.nala-coder/logs/nala-coder.log"  # 日志文件路径（当output为file或both时使用）
 
 # MCP配置
 mcp:

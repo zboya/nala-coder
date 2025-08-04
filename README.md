@@ -52,18 +52,26 @@ git clone github.com/zboya/nala-coder
 cd nala-coder
 ```
 
-2. **配置设置**
+2. **初始化配置**
 ```bash
-# 复制示例配置
-cp configs/config.yaml.example configs/config.yaml
+# 使用初始化脚本自动设置配置目录
+./scripts/init-config.sh
 
-# 编辑配置文件，设置API密钥
-vi configs/config.yaml
+# 或者手动设置
+mkdir -p ~/.nala-coder/{storage,logs,prompts}
+cp configs/config.yaml.example ~/.nala-coder/config.yaml
+cp -r prompts/* ~/.nala-coder/prompts/
 ```
 
-3. **运行服务**
+3. **配置API密钥**
 ```bash
-make server
+# 编辑配置文件，设置你的API密钥
+vi ~/.nala-coder/config.yaml
+```
+
+4. **运行服务**
+```bash
+make
 ```
 
 4. **Web界面**
@@ -72,6 +80,29 @@ make server
 然后说“小助手”唤醒后，即可对话编程
 
 ## 🔧 配置详解
+
+### 配置目录结构
+
+NaLa Coder 将所有配置和数据文件统一存放在 `~/.nala-coder` 目录下：
+
+```
+~/.nala-coder/
+├── config.yaml          # 主配置文件
+├── storage/              # 数据存储目录
+│   ├── sessions.db       # 会话数据库（SQLite）
+│   └── CODE_AGENT.md     # 持久化上下文文件
+├── logs/                 # 日志文件目录
+│   └── nala-coder.log    # 应用日志
+└── prompts/              # 提示词文件目录
+    ├── en/               # 英文提示词
+    │   ├── system.md     # 系统提示词
+    │   ├── compression.md # 压缩提示词
+    │   └── user_info.md  # 用户信息提示词
+    └── ch/               # 中文提示词
+        ├── system.md
+        ├── compression.md
+        └── user_info.md
+```
 
 ### 大模型配置
 

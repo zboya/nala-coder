@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -41,6 +42,8 @@ func run() error {
 	if err := viper.Unmarshal(&config); err != nil {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
+
+	logger.Infof("get config: %+v", config)
 
 	// 创建Agent构建器
 	builder := agent.NewBuilder(&config, logger)
@@ -107,12 +110,16 @@ func initConfig() error {
 	if err != nil {
 		return err
 	}
+	home, _ := os.UserHomeDir()
 
+	viper.AddConfigPath(".")                                // 当前目录
+	viper.AddConfigPath(filepath.Join(home, ".nala-coder")) // 用户目录下的nala-coder文件夹
 	viper.AddConfigPath(filepath.Join(cwd, "configs"))
-	viper.AddConfigPath(".")
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 
+	viper.SetEnvPrefix("NALA")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	// 环境变量支持
 	viper.AutomaticEnv()
 
@@ -131,20 +138,20 @@ func initConfig() error {
 
 // setDefaultConfig 设置默认配置
 func setDefaultConfig() {
+	home, _ := os.UserHomeDir()
 	viper.SetDefault("server.port", "8888")
 	viper.SetDefault("server.host", "0.0.0.0")
-	viper.SetDefault("llm.default_provider", "openai")
-	viper.SetDefault("agent.max_loops", 10)
+	viper.SetDefault("llm.default_provider", "deepseek")
+	viper.SetDefault("agent.max_loops", 50)
 	viper.SetDefault("agent.context_window", 32000)
 	viper.SetDefault("agent.compression_threshold", 0.9)
 	viper.SetDefault("tools.max_concurrency", 10)
 	viper.SetDefault("context.history_limit", 6)
-	viper.SetDefault("context.storage_path", "./storage")
+	viper.SetDefault("context.storage_path", filepath.Join(home, ".nala-coder", "storage"))
 	viper.SetDefault("context.persistence_file", "CODE_AGENT.md")
-	viper.SetDefault("prompts.directory", "./prompts")
+	viper.SetDefault("prompts.directory", filepath.Join(home, ".nala-coder", "prompts"))
 	viper.SetDefault("prompts.hot_reload", true)
 	viper.SetDefault("logging.level", "info")
-	viper.SetDefault("speech.enabled", false)
-	viper.SetDefault("speech.provider", "baidu")
+	viper.SetDefault("speech.enabled", true)
 	viper.SetDefault("speech.timeout", 30)
 }
