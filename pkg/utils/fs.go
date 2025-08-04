@@ -51,22 +51,23 @@ func BFSDirectoryTraversal(root string, maxItems int) (string, error) {
 		depth int
 	}
 
-	queue := []dirInfo{{path: root, depth: 0}}
-
-	for len(queue) > 0 && itemCount < maxItems {
-		current := queue[0]
-		queue = queue[1:]
-
-		entries, err := os.ReadDir(current.path)
-		if err != nil {
-			return "", err
+	// 递归处理每个目录
+	var processDir func(dirPath string, depth int) error
+	processDir = func(dirPath string, depth int) error {
+		if itemCount >= maxItems {
+			return nil
 		}
 
-		for _, entry := range entries {
-			if itemCount >= maxItems {
-				break
-			}
+		entries, err := os.ReadDir(dirPath)
+		if err != nil {
+			return err
+		}
 
+		// 分别收集文件和目录
+		var files []os.DirEntry
+		var dirs []os.DirEntry
+
+		for _, entry := range entries {
 			if strings.HasPrefix(entry.Name(), ".") {
 				continue
 			}
@@ -74,17 +75,44 @@ func BFSDirectoryTraversal(root string, maxItems int) (string, error) {
 				continue
 			}
 
-			fullPath := filepath.Join(current.path, entry.Name())
-			indent := strings.Repeat("  ", current.depth)
-
 			if entry.IsDir() {
-				result.WriteString(indent + entry.Name() + "/\n")
-				queue = append(queue, dirInfo{path: fullPath, depth: current.depth + 1})
+				dirs = append(dirs, entry)
 			} else {
-				result.WriteString(indent + "- " + entry.Name() + "\n")
+				files = append(files, entry)
 			}
+		}
+
+		// 先输出当前目录的所有文件
+		for _, file := range files {
+			if itemCount >= maxItems {
+				break
+			}
+			indent := strings.Repeat("  ", depth)
+			result.WriteString(indent + "- " + file.Name() + "\n")
 			itemCount++
 		}
+
+		// 然后递归处理子目录
+		for _, dir := range dirs {
+			if itemCount >= maxItems {
+				break
+			}
+			indent := strings.Repeat("  ", depth)
+			result.WriteString(indent + dir.Name() + "/\n")
+			itemCount++
+
+			fullPath := filepath.Join(dirPath, dir.Name())
+			if err := processDir(fullPath, depth+1); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	// 处理根目录
+	if err := processDir(root, 0); err != nil {
+		return "", err
 	}
 
 	return result.String(), nil
