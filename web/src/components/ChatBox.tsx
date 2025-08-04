@@ -25,7 +25,7 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [wakeWord, setWakeWord] = useState('小助手');
+  const [wakeWord, setWakeWord] = useState('小娜');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -60,13 +60,33 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
   // 处理语音转录结果
   useEffect(() => {
     // 只有当语音识别完成（不再监听）且有有效内容时才处理
-    if (transcript && transcript.trim() && !isListening && isAwake) {
+    if (transcript && transcript.trim() && !isListening && isAwake && !isLoading) {
       console.log('📨 [ChatBox] Processing completed speech transcript:', transcript);
-      setInput(transcript);
+      const message = transcript.trim();
+
+      // 直接发送消息给后端
+      const sendSpeechMessage = async () => {
+        setIsLoading(true);
+        try {
+          await onSendMessage(message);
+          console.log('✅ [ChatBox] Speech message sent successfully:', message);
+        } catch (error) {
+          console.error('❌ [ChatBox] Failed to send speech message:', error);
+          // 如果发送失败，将内容放到输入框让用户手动发送
+          setInput(message);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      // 清理语音识别状态
       resetTranscript();
       sleep();
+
+      // 发送消息
+      sendSpeechMessage();
     }
-  }, [transcript, isListening, isAwake, resetTranscript, sleep]);
+  }, [transcript, isListening, isAwake, isLoading, onSendMessage, resetTranscript, sleep]);
 
   // 处理动画状态
   useEffect(() => {

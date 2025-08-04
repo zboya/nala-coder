@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { getSpeechConfig } from '@/services/api';
@@ -11,8 +11,8 @@ interface VoiceAssistantProps {
 
 export const VoiceAssistant = ({ onTranscript }: VoiceAssistantProps) => {
   const [isAnimating, setIsAnimating] = useState(false);
-  const [wakeWords, setWakeWords] = useState<string[]>(['小助手', '你好助手', 'hey assistant']);
-  
+  const [wakeWords, setWakeWords] = useState<string[]>(['小娜','小助手']);
+
   // 加载语音配置
   useEffect(() => {
     const loadSpeechConfig = async () => {
@@ -65,8 +65,8 @@ export const VoiceAssistant = ({ onTranscript }: VoiceAssistantProps) => {
   const getStateText = () => {
     if (isAwake && isListening) return '正在听...';
     if (isWakeWordListening) {
-      const displayWords = wakeWords.length > 2 
-        ? `${wakeWords.slice(0, 2).join('", "')}...` 
+      const displayWords = wakeWords.length > 2
+        ? `${wakeWords.slice(0, 2).join('", "')}...`
         : wakeWords.join('", "');
       return `等待唤醒词"${displayWords}"`;
     }
@@ -77,6 +77,36 @@ export const VoiceAssistant = ({ onTranscript }: VoiceAssistantProps) => {
     if (isAwake && isListening) return <Volume2 className="h-6 w-6" />;
     if (isWakeWordListening) return <Mic className="h-6 w-6" />;
     return <MicOff className="h-6 w-6" />;
+  };
+
+  // 声纹动画组件
+  const SoundWave = () => {
+    const [animationKey, setAnimationKey] = useState(0);
+
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setAnimationKey(prev => prev + 1);
+      }, 100);
+
+      return () => clearInterval(interval);
+    }, []);
+
+    return (
+      <div className="flex items-center justify-center space-x-0.5">
+        {[...Array(5)].map((_, i) => {
+          const height = 8 + Math.sin(animationKey * 0.3 + i * 0.8) * 6;
+          return (
+            <div
+              key={i}
+              className="w-0.5 bg-white rounded-full transition-all duration-100"
+              style={{
+                height: `${height}px`,
+              }}
+            />
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -95,7 +125,7 @@ export const VoiceAssistant = ({ onTranscript }: VoiceAssistantProps) => {
           disabled={!isWakeWordListening && !isAwake}
         >
           {isAnimating ? (
-            <Loader2 className="h-6 w-6 animate-spin" />
+            <SoundWave />
           ) : (
             getStateIcon()
           )}
