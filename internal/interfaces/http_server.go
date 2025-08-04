@@ -399,12 +399,13 @@ func (s *HTTPServer) handleGetTools(c *gin.Context) {
 func (s *HTTPServer) loggingMiddleware() gin.HandlerFunc {
 	return gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
 		s.logger.WithFields(log.Fields{
-			"status":     param.StatusCode,
-			"method":     param.Method,
-			"path":       param.Path,
-			"ip":         param.ClientIP,
-			"latency":    param.Latency,
-			"user_agent": param.Request.UserAgent(),
+			"status":    param.StatusCode,
+			"method":    param.Method,
+			"path":      param.Path,
+			"ip":        param.ClientIP,
+			"latency":   param.Latency,
+			"body_size": param.BodySize,
+			// "user_agent": param.Request.UserAgent(),
 		}).Info("HTTP request")
 		return ""
 	})
@@ -438,7 +439,7 @@ func (s *HTTPServer) handleGetSpeechConfig(c *gin.Context) {
 
 	// 设置默认值
 	if len(config.WakeWords) == 0 {
-		config.WakeWords = []string{"小助手", "助手", "hello", "hey"}
+		config.WakeWords = []string{"小助手", "助手"}
 	}
 	if config.WakeTimeout == 0 {
 		config.WakeTimeout = 30

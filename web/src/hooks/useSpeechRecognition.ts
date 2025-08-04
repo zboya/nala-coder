@@ -104,7 +104,10 @@ export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) 
 
     recognition.onerror = (event) => {
       console.error('❌ [Wake Word] Recognition error:', event.error);
-      setError(`唤醒词识别错误: ${event.error}`);
+      // no-speech 错误是正常的静默状态，不需要显示错误提示
+      if (event.error !== 'no-speech') {
+        setError(`唤醒词识别错误: ${event.error}`);
+      }
       wakeWordStartingRef.current = false;
     };
 
@@ -199,7 +202,10 @@ export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) 
 
     recognition.onerror = (event) => {
       console.error('❌ [Speech] Recognition error:', event.error);
-      setError(`语音识别错误: ${event.error}`);
+      // no-speech 错误是正常的静默状态，不需要显示错误提示
+      if (event.error !== 'no-speech') {
+        setError(`语音识别错误: ${event.error}`);
+      }
       setIsListening(false);
       isStartingRef.current = false;
     };
