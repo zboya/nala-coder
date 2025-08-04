@@ -11,7 +11,7 @@ interface VoiceAssistantProps {
 
 export const VoiceAssistant = ({ onTranscript }: VoiceAssistantProps) => {
   const [isAnimating, setIsAnimating] = useState(false);
-  const [wakeWord, setWakeWord] = useState('小助手');
+  const [wakeWords, setWakeWords] = useState<string[]>(['小助手', '你好助手', 'hey assistant']);
   
   // 加载语音配置
   useEffect(() => {
@@ -19,7 +19,7 @@ export const VoiceAssistant = ({ onTranscript }: VoiceAssistantProps) => {
       try {
         const config = await getSpeechConfig();
         if (config.wake_words && config.wake_words.length > 0) {
-          setWakeWord(config.wake_words[0]);
+          setWakeWords(config.wake_words);
         }
       } catch (error) {
         console.error('Failed to load speech config:', error);
@@ -38,7 +38,7 @@ export const VoiceAssistant = ({ onTranscript }: VoiceAssistantProps) => {
     error,
     sleep,
     resetTranscript
-  } = useSpeechRecognition();
+  } = useSpeechRecognition({ wakeWords });
 
   useEffect(() => {
     if (transcript && transcript.trim()) {
@@ -64,7 +64,12 @@ export const VoiceAssistant = ({ onTranscript }: VoiceAssistantProps) => {
 
   const getStateText = () => {
     if (isAwake && isListening) return '正在听...';
-    if (isWakeWordListening) return `等待唤醒词"${wakeWord}"`;
+    if (isWakeWordListening) {
+      const displayWords = wakeWords.length > 2 
+        ? `${wakeWords.slice(0, 2).join('", "')}...` 
+        : wakeWords.join('", "');
+      return `等待唤醒词"${displayWords}"`;
+    }
     return '语音助手';
   };
 
