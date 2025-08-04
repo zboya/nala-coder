@@ -3,7 +3,6 @@ package interfaces
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"io/fs"
 	"io/ioutil"
 	"net/http"
@@ -67,43 +66,132 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 		api.GET("/tools", s.handleGetTools)
 	}
 
-	// 设置嵌入式HTML模板
-	templ := template.Must(template.New("").ParseFS(embedded.GetWebFS(), "web/templates/*"))
-	router.SetHTMLTemplate(templ)
-
-	// 设置嵌入式静态文件
-	staticFS, err := fs.Sub(embedded.GetWebFS(), "web/static")
+	// 设置嵌入式静态文件 - React构建后的资源
+	distFS, err := fs.Sub(embedded.GetWebFS(), "web/dist")
 	if err != nil {
-		s.logger.Error("Failed to create static filesystem", "error", err)
+		s.logger.Error("Failed to create dist filesystem", "error", err)
 		// 如果子文件系统创建失败，使用原始方式
-		router.StaticFS("/static", http.FS(embedded.GetWebFS()))
+		router.StaticFS("/assets", http.FS(embedded.GetWebFS()))
 	} else {
-		router.StaticFS("/static", http.FS(staticFS))
+		// 创建assets子文件系统，指向dist/assets目录
+		assetsFS, err := fs.Sub(distFS, "assets")
+		if err != nil {
+			s.logger.Error("Failed to create assets filesystem", "error", err)
+			// 回退到直接使用distFS
+			router.StaticFS("/assets", http.FS(distFS))
+		} else {
+			// 静态资源路由 - 将/assets路径映射到dist/assets目录
+			router.StaticFS("/assets", http.FS(assetsFS))
+		}
+
+		// 处理其他静态文件（如favicon等）
+		router.GET("/favicon.ico", func(c *gin.Context) {
+			file, err := distFS.Open("favicon.ico")
+			if err != nil {
+				c.Status(http.StatusNotFound)
+				return
+			}
+			defer file.Close()
+
+			stat, err := file.Stat()
+			if err != nil {
+				c.Status(http.StatusInternalServerError)
+				return
+			}
+
+			c.DataFromReader(http.StatusOK, stat.Size(), "image/x-icon", file, nil)
+		})
+
+		// 处理其他根级静态文件
+		router.GET("/robots.txt", func(c *gin.Context) {
+			file, err := distFS.Open("robots.txt")
+			if err != nil {
+				c.Status(http.StatusNotFound)
+				return
+			}
+			defer file.Close()
+
+			stat, err := file.Stat()
+			if err != nil {
+				c.Status(http.StatusInternalServerError)
+				return
+			}
+
+			c.DataFromReader(http.StatusOK, stat.Size(), "text/plain", file, nil)
+		})
 	}
 
-	// 前端文件路由 - 处理所有 /frontend/* 请求
+	// 前端文件路由 - 处理所有 /frontend/* 请求（开发模式）
 	router.Static("/frontend", "./frontend")
 
-	// 默认页面 - 优先使用前端页面
-	router.GET("/", func(c *gin.Context) {
-		// 检查是否存在前端文件
+	// React SPA 路由处理
+	router.NoRoute(func(c *gin.Context) {
+		// 如果是API请求，返回404
+		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "API endpoint not found"})
+			return
+		}
+
+		// 检查是否存在开发模式的前端文件
 		if _, err := os.Stat("./frontend/index.html"); err == nil {
 			// 如果存在前端文件，重定向到前端页面
 			c.Redirect(http.StatusMovedPermanently, "/frontend/")
 			return
 		}
 
-		// 否则使用嵌入式模板
-		currentDir, err := os.Getwd()
-		if err != nil {
-			s.logger.Error("Failed to get current directory", "error", err)
-			currentDir = "未知路径"
+		// 否则使用嵌入式React应用
+		if distFS != nil {
+			indexFile, err := distFS.Open("index.html")
+			if err != nil {
+				s.logger.Error("Failed to open index.html", "error", err)
+				c.String(http.StatusInternalServerError, "Failed to load application")
+				return
+			}
+			defer indexFile.Close()
+
+			indexContent, err := ioutil.ReadAll(indexFile)
+			if err != nil {
+				s.logger.Error("Failed to read index.html", "error", err)
+				c.String(http.StatusInternalServerError, "Failed to load application")
+				return
+			}
+
+			c.Data(http.StatusOK, "text/html; charset=utf-8", indexContent)
+		} else {
+			c.String(http.StatusInternalServerError, "Application not available")
+		}
+	})
+
+	// 默认页面 - 重定向到React应用
+	router.GET("/", func(c *gin.Context) {
+		// 检查是否存在开发模式的前端文件
+		if _, err := os.Stat("./frontend/index.html"); err == nil {
+			// 如果存在前端文件，重定向到前端页面
+			c.Redirect(http.StatusMovedPermanently, "/frontend/")
+			return
 		}
 
-		c.HTML(http.StatusOK, "index.html", gin.H{
-			"title":       "NaLa Coder",
-			"projectPath": currentDir,
-		})
+		// 否则使用嵌入式React应用
+		if distFS != nil {
+			indexFile, err := distFS.Open("index.html")
+			if err != nil {
+				s.logger.Error("Failed to open index.html", "error", err)
+				c.String(http.StatusInternalServerError, "Failed to load application")
+				return
+			}
+			defer indexFile.Close()
+
+			indexContent, err := ioutil.ReadAll(indexFile)
+			if err != nil {
+				s.logger.Error("Failed to read index.html", "error", err)
+				c.String(http.StatusInternalServerError, "Failed to load application")
+				return
+			}
+
+			c.Data(http.StatusOK, "text/html; charset=utf-8", indexContent)
+		} else {
+			c.String(http.StatusInternalServerError, "Application not available")
+		}
 	})
 
 	return router

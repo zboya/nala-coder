@@ -71,5 +71,11 @@ testdata/output/
 debug
 pprof/
 
-# tmp
+# Web build artifacts
+web/dist/
+web/node_modules/
 pkg/embedded/web/
+
+# npm/yarn files
+web/package-lock.json
+web/yarn.lock

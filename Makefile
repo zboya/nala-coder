@@ -1,6 +1,6 @@
 # NaLa Coder Makefile
 
-.PHONY: default help build test clean install deps fmt lint build-embedded deploy server
+.PHONY: default help build test clean install deps fmt lint build-embedded deploy server build-web build-web-dev install-web clean-web
 
 # 默认目标
 default: server
@@ -11,14 +11,18 @@ help:
 	@echo "Available commands:"
 	@echo "  build         - Build all binaries"
 	@echo "  build-embedded- Build binaries with embedded web assets"
+	@echo "  build-web     - Build React application (production)"
+	@echo "  build-web-dev - Build React application (development)"
+	@echo "  install-web   - Install web dependencies"
+	@echo "  clean-web     - Clean web build artifacts"
 	@echo "  test          - Run tests"
-	@echo "  clean         - Clean build artifacts"
+	@echo "  clean         - Clean all build artifacts"
 	@echo "  install       - Install dependencies"
 	@echo "  deps          - Download dependencies"
 	@echo "  fmt           - Format code"
 	@echo "  lint          - Lint code"
 	@echo "  deploy        - Build embedded assets"
-	#echo "  server        - Build embedded assets And Start the server"
+	@echo "  server        - Build embedded assets and start the server"
 
 # 构建所有二进制文件
 build:
@@ -33,7 +37,7 @@ test:
 	go test -v ./...
 
 # 清理构建产物
-clean:
+clean: clean-web
 	rm -rf bin/
 	rm -rf storage/
 	go clean
@@ -95,16 +99,18 @@ check-config:
 
 # 构建嵌入式版本（包含所有web资源）
 build-embedded:
+	@echo "Building React application..."
+	@cd web && npm run build
 	@echo "Preparing embedded web assets..."
 	@mkdir -p pkg/embedded/web
-	@cp -r web/* pkg/embedded/web/ 2>/dev/null || true
+	@cp -r web/dist pkg/embedded/web/ 2>/dev/null || true
 	@echo "Building server with embedded assets..."
 	go build -o bin/nala-coder-server cmd/server/main.go
 	@echo "Embedded build complete!"
-	@echo "Binary size: $$(du -h bin/nala-coder-server | cut -f1)"
+	@echo "Binary size: $(du -h bin/nala-coder-server | cut -f1)"
 
 # 完整部署流程
-deploy: clean check-config build-embedded 
+deploy: clean check-config install-web build-embedded 
 	@echo "🚀 Deployment ready!"
 	@echo "Start the server with: ./bin/nala-coder-server"
 
@@ -113,8 +119,29 @@ server: deploy
 	@echo "Starting server, Access the web interface at: http://localhost:8888"
 	./bin/nala-coder-server
 
+# 构建React应用（开发模式）
+build-web-dev:
+	@echo "Building React application in development mode..."
+	@cd web && npm run build:dev
+
+# 构建React应用（生产模式）
+build-web:
+	@echo "Building React application in production mode..."
+	@cd web && npm run build
+
+# 安装Web依赖
+install-web:
+	@echo "Installing web dependencies..."
+	@cd web && npm install
+
 # 开发模式构建（自动嵌入资源）
 dev-build:
 	@echo "Development build with auto-embedded assets..."
 	@make build-embedded
 	@echo "Development build ready!"
+
+# 清理Web构建产物
+clean-web:
+	@echo "Cleaning web build artifacts..."
+	@rm -rf web/dist
+	@rm -rf pkg/embedded/web
