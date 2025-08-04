@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <!-- 现代渐变 -->
+    <linearGradient id="modernGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="25%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="75%" style="stop-color:#ec4899;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 内部高光 -->
+    <radialGradient id="highlight" cx="25%" cy="25%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.4" />
+      <stop offset="70%" style="stop-color:#ffffff;stop-opacity:0.1" />
+      <stop offset="100%" style="stop-color:#000000;stop-opacity:0.05" />
+    </radialGradient>
+    
+    <!-- 发光滤镜 -->
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="0.8" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- 阴影滤镜 -->
+    <filter id="dropShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- 主圆形背景 -->
+  <circle cx="16" cy="16" r="15" fill="url(#modernGrad)" filter="url(#dropShadow)"/>
+  
+  <!-- 内部高光层 -->
+  <circle cx="16" cy="16" r="15" fill="url(#highlight)"/>
+  
+  <!-- 主图标组 -->
+  <g filter="url(#softGlow)">
+    <!-- 代码符号 < > -->
+    <path d="M8.5 10.5 L5.5 13.5 L5.5 18.5 L8.5 21.5" 
+          stroke="#ffffff" stroke-width="2.8" fill="none" 
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M23.5 10.5 L26.5 13.5 L26.5 18.5 L23.5 21.5" 
+          stroke="#ffffff" stroke-width="2.8" fill="none" 
+          stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- 中心AI大脑 -->
+    <circle cx="16" cy="16" r="4.5" fill="none" stroke="#ffffff" stroke-width="2.2"/>
+    
+    <!-- 内核 -->
+    <circle cx="16" cy="16" r="2" fill="#ffffff"/>
+    
+    <!-- 神经网络连接线 -->
+    <g opacity="0.85">
+      <line x1="11.5" y1="12.5" x2="13.2" y2="13.8" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+      <line x1="18.8" y1="13.8" x2="20.5" y2="12.5" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+      <line x1="11.5" y1="19.5" x2="13.2" y2="18.2" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+      <line x1="18.8" y1="18.2" x2="20.5" y2="19.5" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+    </g>
+    
+    <!-- 节点装饰 -->
+    <circle cx="10.5" cy="16" r="1.2" fill="#ffffff" opacity="0.75"/>
+    <circle cx="21.5" cy="16" r="1.2" fill="#ffffff" opacity="0.75"/>
+    
+    <!-- 小装饰点 -->
+    <circle cx="16" cy="10" r="0.8" fill="#ffffff" opacity="0.6"/>
+    <circle cx="16" cy="22" r="0.8" fill="#ffffff" opacity="0.6"/>
+  </g>
+</svg>

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <defs>
+    <!-- 主渐变 -->
+    <linearGradient id="appleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
+      <stop offset="30%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#ec4899;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f97316;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 内阴影 -->
+    <radialGradient id="appleInner" cx="30%" cy="30%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.4" />
+      <stop offset="100%" style="stop-color:#000000;stop-opacity:0.1" />
+    </radialGradient>
+    
+    <!-- 发光效果 -->
+    <filter id="appleGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- 圆角矩形背景 -->
+  <rect x="10" y="10" width="160" height="160" rx="35" ry="35" fill="url(#appleGrad)"/>
+  
+  <!-- 内部高光 -->
+  <rect x="10" y="10" width="160" height="160" rx="35" ry="35" fill="url(#appleInner)"/>
+  
+  <!-- 主图标 -->
+  <g filter="url(#appleGlow)">
+    <!-- 左括号 -->
+    <path d="M50 60 L35 75 L35 105 L50 120" stroke="#ffffff" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- 右括号 -->
+    <path d="M130 60 L145 75 L145 105 L130 120" stroke="#ffffff" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- 中心AI符号 -->
+    <circle cx="90" cy="90" r="18" fill="none" stroke="#ffffff" stroke-width="6"/>
+    <circle cx="90" cy="90" r="8" fill="#ffffff"/>
+    
+    <!-- 连接线和装饰 -->
+    <line x1="65" y1="70" x2="75" y2="78" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+    <line x1="105" y1="78" x2="115" y2="70" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+    <line x1="65" y1="110" x2="75" y2="102" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+    <line x1="105" y1="102" x2="115" y2="110" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+    
+    <!-- 装饰点 -->
+    <circle cx="60" cy="90" r="3" fill="#ffffff" opacity="0.7"/>
+    <circle cx="120" cy="90" r="3" fill="#ffffff" opacity="0.7"/>
+  </g>
+</svg>

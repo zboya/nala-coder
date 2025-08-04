@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+  
+  <!-- Grid pattern -->
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  
+  <!-- Main icon circle -->
+  <circle cx="300" cy="315" r="120" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="3"/>
+  
+  <!-- Large code brackets -->
+  <path d="M200 250 L150 300 L150 330 L200 380" stroke="#ffffff" stroke-width="8" fill="none" stroke-linecap="round" filter="url(#glow)"/>
+  <path d="M400 250 L450 300 L450 330 L400 380" stroke="#ffffff" stroke-width="8" fill="none" stroke-linecap="round" filter="url(#glow)"/>
+  
+  <!-- Center elements -->
+  <circle cx="300" cy="315" r="12" fill="#ffffff" filter="url(#glow)"/>
+  <line x1="250" y1="280" x2="320" y2="280" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+  <line x1="280" y1="350" x2="350" y2="350" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+  
+  <!-- Title -->
+  <text x="550" y="280" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#ffffff" filter="url(#glow)">nala-coder</text>
+  
+  <!-- Subtitle -->
+  <text x="550" y="340" font-family="Arial, sans-serif" font-size="32" fill="rgba(255,255,255,0.9)">AI-Powered Code Assistant</text>
+  
+  <!-- Decorative code elements -->
+  <text x="550" y="420" font-family="Monaco, monospace" font-size="24" fill="rgba(255,255,255,0.7)">&lt;/&gt; Intelligent Coding</text>
+  <text x="550" y="460" font-family="Monaco, monospace" font-size="24" fill="rgba(255,255,255,0.7)">🤖 AI Assistant</text>
+  <text x="550" y="500" font-family="Monaco, monospace" font-size="24" fill="rgba(255,255,255,0.7)">⚡ Fast Development</text>
+</svg>
