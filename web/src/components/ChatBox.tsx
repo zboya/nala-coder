@@ -242,17 +242,36 @@ export const ChatBox = ({ onSendMessage, messages }: ChatBoxProps) => {
             size="icon"
             variant="outline"
             className={cn(
-              "h-10 w-10 shrink-0 transition-all duration-300",
+              "h-10 w-10 shrink-0 transition-all duration-300 relative border-2",
               isAnimating && "scale-110",
-              isAwake && "bg-accent hover:bg-accent/90"
+              isAwake && isListening && "bg-green-100 border-green-400 hover:bg-green-200 dark:bg-green-900/30 dark:border-green-500",
+              isWakeWordListening && !isAwake && "bg-blue-100 border-blue-400 hover:bg-blue-200 dark:bg-blue-900/30 dark:border-blue-500",
+              !isWakeWordListening && !isAwake && "bg-gray-100 border-gray-300 hover:bg-gray-200 dark:bg-gray-800 dark:border-gray-600"
             )}
             title={getVoiceTooltip()}
           >
-            {isAnimating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              getVoiceIcon()
-            )}
+            {/* 底层话筒标识 - 居中显示 */}
+            <div className={cn(
+              "absolute inset-0 flex items-center justify-center transition-colors duration-300",
+              isAwake && isListening && "text-green-400 opacity-40",
+              isWakeWordListening && !isAwake && "text-blue-400 opacity-40",
+              !isWakeWordListening && !isAwake && "text-gray-400 opacity-30"
+            )}>
+              <Mic className="h-5 w-5" />
+            </div>
+            {/* 前景状态图标 */}
+            <div className={cn(
+              "relative z-10 transition-colors duration-300",
+              isAwake && isListening && "text-green-600 dark:text-green-400",
+              isWakeWordListening && !isAwake && "text-blue-600 dark:text-blue-400",
+              !isWakeWordListening && !isAwake && "text-gray-500 dark:text-gray-400"
+            )}>
+              {isAnimating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                getVoiceIcon()
+              )}
+            </div>
           </Button>
           
           <Button

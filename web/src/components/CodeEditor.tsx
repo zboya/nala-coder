@@ -321,7 +321,7 @@ export const CodeEditor = ({ selectedFile }: CodeEditorProps) => {
         
         toast({
           title: "加载文件内容失败",
-          description: "显示模拟内容，请检查文件路径",
+          description: "请检查文件是否过大或者是否为二进制文件",
           variant: "destructive",
         });
       } finally {

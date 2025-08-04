@@ -466,7 +466,7 @@ func (s *HTTPServer) handleGetFileTree(c *gin.Context) {
 	}
 
 	// 构建文件树
-	root, err := s.buildFileTree(path, 0, 3) // 限制深度为3
+	root, err := s.buildFileTree(path, 0, 20) // 限制深度为20
 	if err != nil {
 		s.logger.Error("Failed to build file tree", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -624,6 +624,7 @@ func (s *HTTPServer) shouldSkipFile(name string) bool {
 func (s *HTTPServer) isTextFile(filePath string) bool {
 	ext := strings.ToLower(filepath.Ext(filePath))
 
+	// 首先通过扩展名快速判断已知的文本文件类型
 	textExts := []string{
 		".txt", ".md", ".markdown", ".rst", ".adoc",
 		".go", ".py", ".js", ".ts", ".jsx", ".tsx",
@@ -657,7 +658,119 @@ func (s *HTTPServer) isTextFile(filePath string) bool {
 		}
 	}
 
-	return false
+	// 已知的二进制文件扩展名，直接返回false
+	binaryExts := []string{
+		".exe", ".dll", ".so", ".dylib", ".a", ".lib",
+		".jpg", ".jpeg", ".png", ".gif", ".bmp", ".ico", ".tiff", ".webp",
+		".mp3", ".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv", ".wav", ".ogg",
+		".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+		".zip", ".tar", ".gz", ".bz2", ".xz", ".7z", ".rar",
+		".bin", ".dat", ".db", ".sqlite", ".sqlite3",
+		".class", ".jar", ".war", ".ear",
+		".o", ".obj", ".pyc", ".pyo",
+	}
+
+	for _, binaryExt := range binaryExts {
+		if ext == binaryExt {
+			return false
+		}
+	}
+
+	// 对于未知扩展名的文件，读取前1KB内容进行二进制检测
+	return s.isTextFileByContent(filePath)
+}
+
+// isTextFileByContent 通过读取文件内容判断是否为文本文件
+func (s *HTTPServer) isTextFileByContent(filePath string) bool {
+	file, err := os.Open(filePath)
+	if err != nil {
+		s.logger.Warn("Failed to open file for content detection", "path", filePath, "error", err)
+		return false
+	}
+	defer file.Close()
+
+	// 读取前1KB内容
+	buffer := make([]byte, 1024)
+	n, err := file.Read(buffer)
+	if err != nil && err.Error() != "EOF" {
+		s.logger.Warn("Failed to read file for content detection", "path", filePath, "error", err)
+		return false
+	}
+
+	// 如果文件为空，认为是文本文件
+	if n == 0 {
+		return true
+	}
+
+	// 检查是否包含NULL字节，这是二进制文件的强烈指示
+	for i := 0; i < n; i++ {
+		if buffer[i] == 0 {
+			return false
+		}
+	}
+
+	// 统计非打印字符的比例
+	nonPrintableCount := 0
+	for i := 0; i < n; i++ {
+		b := buffer[i]
+		// 允许的控制字符：制表符(9)、换行符(10)、回车符(13)
+		if b < 32 && b != 9 && b != 10 && b != 13 {
+			nonPrintableCount++
+		} else if b > 126 {
+			// 检查是否为有效的UTF-8字符
+			if !s.isValidUTF8Byte(buffer, i, n) {
+				nonPrintableCount++
+			}
+		}
+	}
+
+	// 如果非打印字符比例超过30%，认为是二进制文件
+	threshold := float64(n) * 0.3
+	return float64(nonPrintableCount) <= threshold
+}
+
+// isValidUTF8Byte 检查从指定位置开始是否为有效的UTF-8字符
+func (s *HTTPServer) isValidUTF8Byte(buffer []byte, start, length int) bool {
+	if start >= length {
+		return false
+	}
+
+	b := buffer[start]
+
+	// ASCII字符
+	if b <= 127 {
+		return true
+	}
+
+	// UTF-8多字节字符
+	var expectedBytes int
+	if b >= 0xC0 && b <= 0xDF {
+		expectedBytes = 2
+	} else if b >= 0xE0 && b <= 0xEF {
+		expectedBytes = 3
+	} else if b >= 0xF0 && b <= 0xF7 {
+		expectedBytes = 4
+	} else {
+		return false
+	}
+
+	// 检查是否有足够的字节
+	if start+expectedBytes > length {
+		return false
+	}
+
+	// 检查后续字节是否符合UTF-8格式
+	for i := 1; i < expectedBytes; i++ {
+		if start+i >= length {
+			return false
+		}
+		nextByte := buffer[start+i]
+		if nextByte < 0x80 || nextByte > 0xBF {
+			return false
+		}
+	}
+
+	return true
 }
 
 // detectLanguage 检测编程语言
