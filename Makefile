@@ -1,6 +1,6 @@
 # NaLa Coder Makefile
 
-.PHONY: default help build test clean install deps fmt lint build-embedded deploy server build-web build-web-dev install-web clean-web init-config
+.PHONY: default help build test clean install deps fmt lint build-embedded server build-web build-web-dev install-web clean-web init-config
 
 # 默认目标
 default: server
@@ -22,7 +22,6 @@ help:
 	@echo "  deps          - Download dependencies"
 	@echo "  fmt           - Format code"
 	@echo "  lint          - Lint code"
-	@echo "  deploy        - Build embedded assets"
 	@echo "  server        - Build embedded assets and start the server"
 
 # 初始化配置目录
@@ -64,32 +63,9 @@ fmt:
 lint:
 	golangci-lint run
 
-# 初始化项目
-init:
-	mkdir -p storage
-	mkdir -p logs
-	@echo "Project initialized!"
-
-# 开发模式运行
-dev-cli:
-	@echo "Starting CLI in development mode..."
-	go run cmd/cli/main.go -v
-
 dev-server:
 	@echo "Starting server in development mode..."
 	go run cmd/*.go
-
-# 构建Docker镜像
-docker-build:
-	docker build -t nala-coder .
-
-# 运行Docker容器
-docker-run:
-	docker run -p 8888:8888 -v $(PWD)/configs:/app/configs nala-coder
-
-# 生成API文档
-docs:
-	@echo "API documentation available at /api endpoints when server is running"
 
 # 构建嵌入式版本（包含所有web资源）
 build-embedded:
@@ -103,14 +79,10 @@ build-embedded:
 	@echo "Embedded build complete!"
 	@echo "Binary size: $(du -h bin/nala-coder | cut -f1)"
 
-# 完整部署流程
-deploy: clean init-config install-web build-embedded 
+# 运行服务器
+server: clean init-config install-web build-embedded 
 	@echo "🚀 Deployment ready!"
 	@echo "Start the server with: ./bin/nala-coder"
-
-# 运行服务器
-server: deploy
-	@echo "Starting server, Access the web interface at: http://localhost:8888"
 	./bin/nala-coder
 
 # 构建React应用（开发模式）
