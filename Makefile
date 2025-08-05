@@ -47,7 +47,7 @@ clean: clean-web
 	go clean
 
 # 安装二进制文件到系统
-install: build-embedded
+install: init-config build-embedded
 	sudo cp bin/nala-coder /usr/local/bin/
 	@echo "Installed to /usr/local/bin/"
 

@@ -20,8 +20,6 @@
 ```
 nala-coder/
 ├── cmd/                    # 命令行入口
-│   ├── cli/               # CLI 应用
-│   └── server/            # HTTP 服务器
 ├── internal/               # 内部包
 │   ├── agent/             # Agent核心调度层
 │   ├── llm/               # 大模型调用封装
