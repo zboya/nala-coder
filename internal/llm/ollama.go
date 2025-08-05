@@ -1,52 +1,36 @@
 package llm
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
+	"net/url"
 
+	"github.com/ollama/ollama/api"
 	"github.com/zboya/nala-coder/pkg/log"
 	"github.com/zboya/nala-coder/pkg/types"
 )
 
 // OllamaClient Ollama客户端
 type OllamaClient struct {
-	config     types.LLMConfig
-	httpClient *http.Client
-	logger     log.Logger
-}
-
-// OllamaMessage Ollama消息格式
-type OllamaMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-// OllamaRequest Ollama请求格式
-type OllamaRequest struct {
-	Model    string                 `json:"model"`
-	Messages []OllamaMessage        `json:"messages"`
-	Stream   bool                   `json:"stream,omitempty"`
-	Options  map[string]interface{} `json:"options,omitempty"`
-}
-
-// OllamaResponse Ollama响应格式
-type OllamaResponse struct {
-	Model     string        `json:"model"`
-	Message   OllamaMessage `json:"message"`
-	Done      bool          `json:"done"`
-	CreatedAt string        `json:"created_at"`
+	config types.LLMConfig
+	client *api.Client
+	logger log.Logger
 }
 
 // NewOllamaClient 创建Ollama客户端
 func NewOllamaClient(config types.LLMConfig, logger log.Logger) *OllamaClient {
+	baseURL, err := url.Parse(config.BaseURL)
+	if err != nil {
+		baseURL, _ = url.Parse("http://localhost:11434")
+	}
+
+	client := api.NewClient(baseURL, &http.Client{})
 	return &OllamaClient{
-		config:     config,
-		httpClient: &http.Client{},
-		logger:     logger,
+		config: config,
+		client: client,
+		logger: logger,
 	}
 }
 
@@ -62,116 +46,192 @@ func (c *OllamaClient) GetProvider() types.LLMProvider {
 
 // Chat 对话
 func (c *OllamaClient) Chat(ctx context.Context, request types.LLMRequest) (*types.LLMResponse, error) {
-	ollamaReq := c.convertRequest(request)
-	ollamaReq.Stream = false
+	messages := c.convertMessages(request.Messages)
 
-	reqBody, err := json.Marshal(ollamaReq)
+	chatRequest := &api.ChatRequest{
+		Model:    c.getModel(request.Model),
+		Messages: messages,
+		Options:  c.buildOptions(request),
+	}
+
+	if len(request.Tools) > 0 {
+		chatRequest.Tools = c.convertTools(request.Tools)
+	}
+
+	var response api.ChatResponse
+	err := c.client.Chat(ctx, chatRequest, func(resp api.ChatResponse) error {
+		response = resp
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
+		return nil, fmt.Errorf("Ollama chat error: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.config.BaseURL+"/api/chat", bytes.NewBuffer(reqBody))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("Ollama API error: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Ollama API returned status %d: %s", resp.StatusCode, string(body))
-	}
-
-	var ollamaResp OllamaResponse
-	if err := json.NewDecoder(resp.Body).Decode(&ollamaResp); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	return c.convertResponse(ollamaResp), nil
+	return c.convertResponse(response), nil
 }
 
 // ChatStream 流式对话
 func (c *OllamaClient) ChatStream(ctx context.Context, request types.LLMRequest) (<-chan types.LLMResponse, error) {
-	ollamaReq := c.convertRequest(request)
-	ollamaReq.Stream = true
+	messages := c.convertMessages(request.Messages)
 
-	reqBody, err := json.Marshal(ollamaReq)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	chatRequest := &api.ChatRequest{
+		Model:    c.getModel(request.Model),
+		Messages: messages,
+		Options:  c.buildOptions(request),
+		Stream:   new(bool),
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.config.BaseURL+"/api/chat", bytes.NewBuffer(reqBody))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+	if len(request.Tools) > 0 {
+		chatRequest.Tools = c.convertTools(request.Tools)
 	}
 
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("Ollama stream API error: %w", err)
-	}
+	*chatRequest.Stream = true
 
 	responseChan := make(chan types.LLMResponse, 10)
 
 	go func() {
 		defer close(responseChan)
-		defer resp.Body.Close()
 
-		decoder := json.NewDecoder(resp.Body)
 		var fullContent string
 
-		for {
-			var ollamaResp OllamaResponse
-			if err := decoder.Decode(&ollamaResp); err != nil {
-				if err == io.EOF {
-					break
-				}
-				return
-			}
-
-			content := ollamaResp.Message.Content
+		err := c.client.Chat(ctx, chatRequest, func(resp api.ChatResponse) error {
+			content := resp.Message.Content
 			fullContent += content
 
 			streamResp := types.LLMResponse{
 				Content: content,
-				Role:    "assistant",
+				Role:    string(resp.Message.Role),
 			}
+
+			if resp.Message.ToolCalls != nil {
+				streamResp.ToolCalls = c.convertToolCalls(resp.Message.ToolCalls)
+			}
+
 			responseChan <- streamResp
 
-			if ollamaResp.Done {
-				// 发送最终响应
+			if resp.Done {
 				final := types.LLMResponse{
 					Content: fullContent,
-					Role:    "assistant",
+					Role:    string(resp.Message.Role),
+					Usage: types.Usage{
+						PromptTokens:     resp.PromptEvalCount,
+						CompletionTokens: resp.EvalCount,
+						TotalTokens:      resp.PromptEvalCount + resp.EvalCount,
+					},
+				}
+				if resp.Message.ToolCalls != nil {
+					final.ToolCalls = c.convertToolCalls(resp.Message.ToolCalls)
 				}
 				responseChan <- final
-				break
 			}
+			return nil
+		})
+
+		if err != nil {
+			c.logger.Error("Ollama stream chat error", "error", err)
 		}
 	}()
 
 	return responseChan, nil
 }
 
-// convertRequest 转换请求格式
-func (c *OllamaClient) convertRequest(request types.LLMRequest) OllamaRequest {
-	messages := make([]OllamaMessage, len(request.Messages))
-
-	for i, msg := range request.Messages {
-		messages[i] = OllamaMessage{
+// convertMessages 转换消息格式
+func (c *OllamaClient) convertMessages(messages []types.Message) []api.Message {
+	ollamaMessages := make([]api.Message, len(messages))
+	for i, msg := range messages {
+		ollamaMessages[i] = api.Message{
 			Role:    string(msg.Role),
 			Content: msg.Content,
 		}
-	}
 
-	options := make(map[string]interface{})
+		// 转换工具调用
+		if len(msg.ToolCalls) > 0 {
+			ollamaMessages[i].ToolCalls = c.convertToolCallsToOllama(msg.ToolCalls)
+		}
+	}
+	return ollamaMessages
+}
+
+// convertTools 转换工具格式
+func (c *OllamaClient) convertTools(tools []types.Tool) []api.Tool {
+	ollamaTools := make([]api.Tool, len(tools))
+	for i, tool := range tools {
+		oTool := api.Tool{
+			Type: "function",
+			Function: api.ToolFunction{
+				Name:        tool.Function.Name,
+				Description: tool.Function.Description,
+				Parameters: struct {
+					Type       string   `json:"type"`
+					Defs       any      `json:"$defs,omitempty"`
+					Items      any      `json:"items,omitempty"`
+					Required   []string `json:"required"`
+					Properties map[string]struct {
+						Type        api.PropertyType `json:"type"`
+						Items       any              `json:"items,omitempty"`
+						Description string           `json:"description"`
+						Enum        []any            `json:"enum,omitempty"`
+					} `json:"properties"`
+				}{},
+			},
+		}
+		properties := tool.Function.Parameters["properties"].(map[string]any)
+		oTool.Function.Parameters.Type = "object"
+		for k, v := range properties {
+			v := v.(map[string]any)
+			oTool.Function.Parameters.Properties[k] = struct {
+				Type        api.PropertyType `json:"type"`
+				Items       any              `json:"items,omitempty"`
+				Description string           `json:"description"`
+				Enum        []any            `json:"enum,omitempty"`
+			}{
+				Type:        api.PropertyType{v["type"].(string)},
+				Description: v["description"].(string),
+			}
+		}
+
+		ollamaTools[i] = oTool
+	}
+	return ollamaTools
+}
+
+// convertToolCalls 转换工具调用格式
+func (c *OllamaClient) convertToolCalls(toolCalls []api.ToolCall) []types.ToolCall {
+	result := make([]types.ToolCall, len(toolCalls))
+	for i, tc := range toolCalls {
+		jsonArgs, _ := json.Marshal(tc.Function.Arguments)
+		jsonArgs = []byte(url.QueryEscape(string(jsonArgs)))
+		result[i] = types.ToolCall{
+			ID: tc.Function.Name, // Ollama uses function name as ID
+			Function: types.ToolCallFunction{
+				Name:      tc.Function.Name,
+				Arguments: string(jsonArgs),
+			},
+		}
+	}
+	return result
+}
+
+// convertToolCallsToOllama 转换工具调用格式到Ollama格式
+func (c *OllamaClient) convertToolCallsToOllama(toolCalls []types.ToolCall) []api.ToolCall {
+	result := make([]api.ToolCall, len(toolCalls))
+	for i, tc := range toolCalls {
+		args := api.ToolCallFunctionArguments{}
+		json.Unmarshal([]byte(tc.Function.Arguments), &args)
+		result[i] = api.ToolCall{
+			Function: api.ToolCallFunction{
+				Name:      tc.Function.Name,
+				Arguments: args,
+			},
+		}
+	}
+	return result
+}
+
+// buildOptions 构建选项
+func (c *OllamaClient) buildOptions(request types.LLMRequest) map[string]any {
+	options := make(map[string]any)
+
 	if request.MaxTokens > 0 {
 		options["num_predict"] = request.MaxTokens
 	} else if c.config.MaxTokens > 0 {
@@ -184,23 +244,26 @@ func (c *OllamaClient) convertRequest(request types.LLMRequest) OllamaRequest {
 		options["temperature"] = c.config.Temperature
 	}
 
-	return OllamaRequest{
-		Model:    c.getModel(request.Model),
-		Messages: messages,
-		Options:  options,
-	}
+	return options
 }
 
 // convertResponse 转换响应格式
-func (c *OllamaClient) convertResponse(resp OllamaResponse) *types.LLMResponse {
-	return &types.LLMResponse{
+func (c *OllamaClient) convertResponse(resp api.ChatResponse) *types.LLMResponse {
+	result := &types.LLMResponse{
 		Content: resp.Message.Content,
-		Role:    "assistant",
+		Role:    string(resp.Message.Role),
 		Usage: types.Usage{
-			// Ollama 通常不返回token使用情况
-			TotalTokens: 0,
+			PromptTokens:     resp.PromptEvalCount,
+			CompletionTokens: resp.EvalCount,
+			TotalTokens:      resp.PromptEvalCount + resp.EvalCount,
 		},
 	}
+
+	if resp.Message.ToolCalls != nil {
+		result.ToolCalls = c.convertToolCalls(resp.Message.ToolCalls)
+	}
+
+	return result
 }
 
 // getModel 获取模型名称

@@ -7,12 +7,13 @@ import (
 
 // Message 代表一条对话消息
 type Message struct {
-	ID        string            `json:"id"`
-	Role      MessageRole       `json:"role"`
-	Content   string            `json:"content"`
-	ToolCalls []ToolCall        `json:"tool_calls,omitempty"`
-	Metadata  map[string]string `json:"metadata,omitempty"`
-	Timestamp time.Time         `json:"timestamp"`
+	ID         string            `json:"id"`
+	Role       MessageRole       `json:"role"`
+	Content    string            `json:"content"`
+	ToolCalls  []ToolCall        `json:"tool_calls,omitempty"`
+	ToolCallID string            `json:"tool_call_id,omitempty"`
+	Metadata   map[string]string `json:"metadata,omitempty"`
+	Timestamp  time.Time         `json:"timestamp"`
 }
 
 // MessageRole 消息角色
@@ -100,11 +101,13 @@ type Tool struct {
 	Function ToolFunction `json:"function"`
 }
 
+type ToolCallFunctionArguments map[string]any
+
 // ToolFunction 工具函数定义
 type ToolFunction struct {
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Parameters  interface{} `json:"parameters"`
+	Name        string                    `json:"name"`
+	Description string                    `json:"description"`
+	Parameters  ToolCallFunctionArguments `json:"parameters"`
 }
 
 // SpeechConfig 语音识别配置（仅前端配置）
