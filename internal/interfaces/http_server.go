@@ -85,8 +85,8 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 		}
 
 		// 处理其他静态文件（如favicon等）
-		router.GET("/favicon.ico", func(c *gin.Context) {
-			file, err := distFS.Open("favicon.ico")
+		router.GET("/favicon.svg", func(c *gin.Context) {
+			file, err := distFS.Open("favicon.svg")
 			if err != nil {
 				c.Status(http.StatusNotFound)
 				return
