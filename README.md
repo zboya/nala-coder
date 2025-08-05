@@ -39,7 +39,7 @@ nala-coder/
 
 ### 前置要求
 
-- Go 1.21+
+- Go 1.24.5+
 - 大模型API密钥（OpenAI、DeepSeek、Claude或本地Ollama）
 
 ### 安装和配置
@@ -50,15 +50,9 @@ git clone github.com/zboya/nala-coder
 cd nala-coder
 ```
 
-2. **初始化配置**
+2. **安装使用**
 ```bash
-# 使用初始化脚本自动设置配置目录
-./scripts/init-config.sh
-
-# 或者手动设置
-mkdir -p ~/.nala-coder/{storage,logs,prompts}
-cp configs/config.yaml.example ~/.nala-coder/config.yaml
-cp -r prompts/* ~/.nala-coder/prompts/
+ make install
 ```
 
 3. **配置API密钥**
@@ -69,13 +63,10 @@ vi ~/.nala-coder/config.yaml
 
 4. **运行服务**
 ```bash
-make
+cd 你需要编辑代码的目录
+nala-coder
 ```
-
-4. **Web界面**
-
-启动服务器后访问: http://localhost:8888
-然后说“小助手”唤醒后，即可对话编程
+启动后会自动打开的页面，允许网页使用麦克风，唤醒小娜后就可以对话编程了。
 
 ## 🔧 配置详解
 
