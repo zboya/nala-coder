@@ -32,10 +32,8 @@ init-config:
 
 # 构建所有二进制文件
 build:
-	@echo "Building CLI..."
-	go build -o bin/nala-coder-cli cmd/cli/main.go
-	@echo "Building server..."
-	go build -o bin/nala-coder-server cmd/server/main.go
+	@echo "Building ..."
+	go build -o bin/nala-coder cmd/*.go
 	@echo "Build complete!"
 
 # 运行测试
@@ -50,7 +48,7 @@ clean: clean-web
 
 # 安装二进制文件到系统
 install: build-embedded
-	sudo cp bin/nala-coder-server /usr/local/bin/
+	sudo cp bin/nala-coder /usr/local/bin/
 	@echo "Installed to /usr/local/bin/"
 
 # 下载依赖
@@ -79,7 +77,7 @@ dev-cli:
 
 dev-server:
 	@echo "Starting server in development mode..."
-	go run cmd/server/main.go
+	go run cmd/*.go
 
 # 构建Docker镜像
 docker-build:
@@ -101,19 +99,19 @@ build-embedded:
 	@mkdir -p pkg/embedded/web
 	@cp -r web/dist pkg/embedded/web/ 2>/dev/null || true
 	@echo "Building server with embedded assets..."
-	go build -o bin/nala-coder-server cmd/server/main.go
+	go build -o bin/nala-coder cmd/*.go
 	@echo "Embedded build complete!"
-	@echo "Binary size: $(du -h bin/nala-coder-server | cut -f1)"
+	@echo "Binary size: $(du -h bin/nala-coder | cut -f1)"
 
 # 完整部署流程
 deploy: clean init-config install-web build-embedded 
 	@echo "🚀 Deployment ready!"
-	@echo "Start the server with: ./bin/nala-coder-server"
+	@echo "Start the server with: ./bin/nala-coder"
 
 # 运行服务器
 server: deploy
 	@echo "Starting server, Access the web interface at: http://localhost:8888"
-	./bin/nala-coder-server
+	./bin/nala-coder
 
 # 构建React应用（开发模式）
 build-web-dev:
