@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pkg/browser"
 )
 
 // GenerateID 生成唯一ID
@@ -206,4 +207,10 @@ func RemoveDuplicates(slice []string) []string {
 		}
 	}
 	return result
+}
+
+// OpenURL 尝试用用户默认浏览器打开 url。
+// 如果成功返回 nil；否则返回具体错误，调用方可决定如何处理。
+func OpenURL(url string) error {
+	return browser.OpenURL(url)
 }

@@ -25,7 +25,7 @@ type AppConfig struct {
 
 // ServerConfig 服务器配置
 type ServerConfig struct {
-	Port string `mapstructure:"port"`
+	// Port string `mapstructure:"port"`
 	Host string `mapstructure:"host"`
 }
 

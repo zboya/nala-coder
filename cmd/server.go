@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,6 +15,7 @@ import (
 	"github.com/zboya/nala-coder/internal/agent"
 	"github.com/zboya/nala-coder/internal/interfaces"
 	"github.com/zboya/nala-coder/pkg/log"
+	"github.com/zboya/nala-coder/pkg/utils"
 )
 
 func runServer() error {
@@ -56,8 +58,15 @@ func runServer() error {
 	server := interfaces.NewHTTPServer(agentInstance, logger, config.Speech)
 	router := server.SetupRoutes()
 
-	// 创建HTTP服务器
-	addr := fmt.Sprintf("%s:%s", config.Server.Host, config.Server.Port)
+	// 使用随机未占用端口
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:0", config.Server.Host))
+	if err != nil {
+		return fmt.Errorf("failed to find available port: %w", err)
+	}
+	defer listener.Close()
+
+	addr := listener.Addr().String()
+	// 获取实际分配的端口
 	httpServer := &http.Server{
 		Addr:    addr,
 		Handler: router,
@@ -66,14 +75,14 @@ func runServer() error {
 	// 启动服务器
 	go func() {
 		logger.Infof("Starting HTTP server on %s", addr)
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Failed to start server: %v\n", err)
 			logger.Fatalf("Failed to start server: %v", err)
 		}
 	}()
 
 	fmt.Printf("Access the web interface at: http://%s\n", addr)
-	logger.Infof("Access the web interface at: http://%s", addr)
+	utils.OpenURL(fmt.Sprintf("http://%s", addr))
 
 	// 等待中断信号
 	quit := make(chan os.Signal, 1)
