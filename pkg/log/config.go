@@ -13,7 +13,6 @@ func DefaultConfig() *Config {
 	return &Config{
 		Level:  "info",
 		Output: "stdout",
-		File:   "./logs/app.log",
 		Format: "text",
 	}
 }

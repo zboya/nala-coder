@@ -36,7 +36,7 @@ llm:
   # Ollama 配置
   ollama:
     base_url: "http://localhost:11434/"
-    model: "llama2"
+    model: "qwen3:30b"
     max_tokens: 8192
     temperature: 0.3
 

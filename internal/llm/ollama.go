@@ -48,7 +48,9 @@ func (c *OllamaClient) GetProvider() types.LLMProvider {
 func (c *OllamaClient) Chat(ctx context.Context, request types.LLMRequest) (*types.LLMResponse, error) {
 	messages := c.convertMessages(request.Messages)
 
+	stream := false
 	chatRequest := &api.ChatRequest{
+		Stream:   &stream,
 		Model:    c.getModel(request.Model),
 		Messages: messages,
 		Options:  c.buildOptions(request),
@@ -63,6 +65,7 @@ func (c *OllamaClient) Chat(ctx context.Context, request types.LLMRequest) (*typ
 		response = resp
 		return nil
 	})
+	c.logger.Debugf("Ollama chat req: %+v resp: %+v", chatRequest, response)
 	if err != nil {
 		return nil, fmt.Errorf("Ollama chat error: %w", err)
 	}
@@ -74,11 +77,12 @@ func (c *OllamaClient) Chat(ctx context.Context, request types.LLMRequest) (*typ
 func (c *OllamaClient) ChatStream(ctx context.Context, request types.LLMRequest) (<-chan types.LLMResponse, error) {
 	messages := c.convertMessages(request.Messages)
 
+	stream := true
 	chatRequest := &api.ChatRequest{
+		Stream:   &stream,
 		Model:    c.getModel(request.Model),
 		Messages: messages,
 		Options:  c.buildOptions(request),
-		Stream:   new(bool),
 	}
 
 	if len(request.Tools) > 0 {
@@ -162,29 +166,22 @@ func (c *OllamaClient) convertTools(tools []types.Tool) []api.Tool {
 				Name:        tool.Function.Name,
 				Description: tool.Function.Description,
 				Parameters: struct {
-					Type       string   `json:"type"`
-					Defs       any      `json:"$defs,omitempty"`
-					Items      any      `json:"items,omitempty"`
-					Required   []string `json:"required"`
-					Properties map[string]struct {
-						Type        api.PropertyType `json:"type"`
-						Items       any              `json:"items,omitempty"`
-						Description string           `json:"description"`
-						Enum        []any            `json:"enum,omitempty"`
-					} `json:"properties"`
-				}{},
+					Type       string                      `json:"type"`
+					Defs       any                         `json:"$defs,omitempty"`
+					Items      any                         `json:"items,omitempty"`
+					Required   []string                    `json:"required"`
+					Properties map[string]api.ToolProperty `json:"properties"`
+				}{
+					Type:       tool.Function.Parameters["type"].(string),
+					Required:   tool.Function.Parameters["required"].([]string),
+					Properties: make(map[string]api.ToolProperty),
+				},
 			},
 		}
 		properties := tool.Function.Parameters["properties"].(map[string]any)
-		oTool.Function.Parameters.Type = "object"
 		for k, v := range properties {
 			v := v.(map[string]any)
-			oTool.Function.Parameters.Properties[k] = struct {
-				Type        api.PropertyType `json:"type"`
-				Items       any              `json:"items,omitempty"`
-				Description string           `json:"description"`
-				Enum        []any            `json:"enum,omitempty"`
-			}{
+			oTool.Function.Parameters.Properties[k] = api.ToolProperty{
 				Type:        api.PropertyType{v["type"].(string)},
 				Description: v["description"].(string),
 			}
